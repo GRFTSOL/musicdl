@@ -13,7 +13,7 @@ from ytmusicapi import YTMusic
 from .base import BaseMusicClient
 from rich.progress import Progress
 from ..utils.youtubeutils import YouTube
-from ..utils import legalizestring, resp2json, isvalidresp, usesearchheaderscookies, byte2mb, seconds2hms, AudioLinkTester, WhisperLRC
+from ..utils import legalizestring, resp2json, isvalidresp, usesearchheaderscookies, byte2mb, seconds2hms, usedownloadheaderscookies, touchdir, AudioLinkTester, WhisperLRC
 
 
 '''YouTubeMusicClient'''
@@ -25,6 +25,39 @@ class YouTubeMusicClient(BaseMusicClient):
         self.default_download_headers = {}
         self.default_headers = self.default_search_headers
         self._initsession()
+    '''_download'''
+    @usedownloadheaderscookies
+    def _download(self, song_info: dict, request_overrides: dict = None, downloaded_song_infos: list = [], progress: Progress = None, song_progress_id: int = 0, songs_progress_id: int = 0):
+        if isinstance(song_info['download_url'], str): return super()._download(song_info=song_info, request_overrides=request_overrides, downloaded_song_infos=downloaded_song_infos, progress=progress, song_progress_id=song_progress_id, songs_progress_id=songs_progress_id)
+        request_overrides = request_overrides or {}
+        try:
+            touchdir(song_info['work_dir'])
+            total_size, chunk_size, downloaded_size = int(song_info['download_url'].filesize), song_info.get('chunk_size', 1024 * 1024), 0
+            progress.update(song_progress_id, total=total_size)
+            save_path, same_name_file_idx = os.path.join(song_info['work_dir'], f"{song_info['song_name']}.{song_info['ext']}"), 1
+            while os.path.exists(save_path):
+                save_path = os.path.join(song_info['work_dir'], f"{song_info['song_name']}_{same_name_file_idx}.{song_info['ext']}")
+                same_name_file_idx += 1
+            with open(save_path, "wb") as fp:
+                for chunk in song_info['download_url'].iterchunks(chunk_size=chunk_size):
+                    if not chunk: continue
+                    fp.write(chunk)
+                    downloaded_size = downloaded_size + len(chunk)
+                    if total_size > 0:
+                        downloading_text = "%0.2fMB/%0.2fMB" % (downloaded_size / 1024 / 1024, total_size / 1024 / 1024)
+                    else:
+                        progress.update(song_progress_id, total=downloaded_size)
+                        downloading_text = "%0.2fMB/%0.2fMB" % (downloaded_size / 1024 / 1024, downloaded_size / 1024 / 1024)
+                    progress.advance(song_progress_id, len(chunk))
+                    progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Downloading: {downloading_text})")
+            progress.advance(songs_progress_id, 1)
+            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Success)")
+            downloaded_song_info = copy.deepcopy(song_info)
+            downloaded_song_info['save_path'] = save_path
+            downloaded_song_infos.append(downloaded_song_info)
+        except Exception as err:
+            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Error: {err})")
+        return downloaded_song_infos
     '''_searchwithytsearchanddownloadmp3rapidapi'''
     def _searchwithytsearchanddownloadmp3rapidapi(self, keyword: str, request_overrides: dict = None):
         # init
@@ -138,6 +171,7 @@ class YouTubeMusicClient(BaseMusicClient):
             'ignore_spelling': rule.get('ignore_spelling', False)
         }
         search_urls = [{'ytmusic_api': ytmusic_api, 'search_rule': search_rule}]
+        self.search_size_per_page = self.search_size_per_source
         # return
         return search_urls
     '''_search'''
@@ -165,6 +199,14 @@ class YouTubeMusicClient(BaseMusicClient):
                 if 'videoId' not in search_result: continue
                 # --init download related results
                 download_result, download_url, download_url_status, ext, file_size, duration = {}, "", {}, 'mp3', 'NULL', search_result.get('duration')
+                # --download with UMP
+                if not download_result or not download_url:
+                    try:
+                        download_url = YouTube(video_id=search_result['videoId']).streams.getaudioonly()
+                        file_size, duration, ext = byte2mb(download_url.filesize), seconds2hms(int(download_url.durationMs) / 1000), 'mp3'
+                        download_result, download_url_status = {'download_url': download_url, 'file_size': file_size, 'duration': duration}, {'ok': True}
+                    except:
+                        download_result, download_url, download_url_status, ext, file_size, duration = {}, "", {}, 'mp3', 'NULL', search_result.get('duration')
                 # --parse with _parsewithytsearchanddownloadmp3rapidapi
                 if not download_result or not download_url:
                     try:
@@ -191,14 +233,6 @@ class YouTubeMusicClient(BaseMusicClient):
                         if ext in ['NULL']: ext = 'mp3'
                     except:
                         download_result, download_url, download_url_status, ext, file_size, duration = {}, "", {}, 'mp3', 'NULL', search_result.get('duration')
-                # --download with UMP
-                if not download_result or not download_url:
-                    try:
-                        download_url = YouTube(video_id=search_result['videoId']).streams.getaudioonly()
-                        file_size, duration, ext = byte2mb(download_url.filesize), seconds2hms(int(download_url.durationMs) / 1000), 'mp3'
-                        download_result, download_url_status = {'download_url': download_url, 'file_size': file_size, 'duration': duration}, {'ok': True}
-                    except:
-                        download_result, download_url, download_url_status, ext, file_size, duration = {}, "", {}, 'mp3', 'NULL', search_result.get('duration')
                 # --lyric
                 try:
                     if os.environ.get('ENABLE_WHISPERLRC', 'False').lower() == 'true':
@@ -223,6 +257,8 @@ class YouTubeMusicClient(BaseMusicClient):
                 )
                 # --append to song_infos
                 song_infos.append(song_info)
+                # --judgement for search_size
+                if self.strict_limit_search_size_per_page and len(song_infos) >= self.search_size_per_page: break
             # --update progress
             progress.advance(progress_id, 1)
             progress.update(progress_id, description=f"{self.source}.search >>> {search_url} (Success)")

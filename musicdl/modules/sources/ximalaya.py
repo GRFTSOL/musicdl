@@ -55,12 +55,10 @@ class XimalayaMusicClient(BaseMusicClient):
         default_rule.update(rule)
         # construct search urls based on search rules
         base_url = 'https://api.cenguigui.cn/api/music/dg_ximalayamusic.php?'
-        search_urls, page_size, count = [], self.search_size_per_source, 0
-        while self.search_size_per_source > count:
-            page_rule = copy.deepcopy(default_rule)
-            page_rule['num'] = self.search_size_per_source
-            search_urls.append(base_url + urlencode(page_rule))
-            count += page_size
+        page_rule = copy.deepcopy(default_rule)
+        page_rule['num'] = self.search_size_per_source
+        search_urls = [base_url + urlencode(page_rule)]
+        self.search_size_per_page = self.search_size_per_source
         # return
         return search_urls
     '''_search'''
@@ -165,6 +163,8 @@ class XimalayaMusicClient(BaseMusicClient):
                 )
                 # --append to song_infos
                 song_infos.append(song_info)
+                # --judgement for search_size
+                if self.strict_limit_search_size_per_page and len(song_infos) >= self.search_size_per_page: break
             # --update progress
             progress.advance(progress_id, 1)
             progress.update(progress_id, description=f"{self.source}.search >>> {search_url} (Success)")

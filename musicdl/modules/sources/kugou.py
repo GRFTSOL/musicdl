@@ -36,9 +36,10 @@ class KugouMusicClient(BaseMusicClient):
         default_rule.update(rule)
         # construct search urls based on search rules
         base_url = 'http://songsearch.kugou.com/song_search_v2?'
-        search_urls, page_size, count = [], 10, 0
+        search_urls, page_size, count = [], self.search_size_per_page, 0
         while self.search_size_per_source > count:
             page_rule = copy.deepcopy(default_rule)
+            page_rule['pagesize'] = page_size
             page_rule['page'] = int(count // page_size) + 1
             search_urls.append(base_url + urlencode(page_rule))
             count += page_size
@@ -94,6 +95,8 @@ class KugouMusicClient(BaseMusicClient):
                 )
                 # --append to song_infos
                 song_infos.append(song_info)
+                # --judgement for search_size
+                if self.strict_limit_search_size_per_page and len(song_infos) >= self.search_size_per_page: break
             # --update progress
             progress.advance(progress_id, 1)
             progress.update(progress_id, description=f"{self.source}.search >>> {search_url} (Success)")

@@ -43,7 +43,7 @@ class MusicClient():
         self.search_rules = search_rules
         self.clients_threadings = clients_threadings
         self.requests_overrides = requests_overrides
-        self.music_sources = music_sources if music_sources else ['MiguMusicClient', 'NeteaseMusicClient', 'KuwoMusicClient', 'KugouMusicClient', 'QQMusicClient', 'QianqianMusicClient']
+        self.music_sources = music_sources if music_sources else ['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient']
         self.music_sources = list(set(self.music_sources))
         # init
         self.logger_handle, self.music_clients = LoggerHandle(), dict()
@@ -52,7 +52,8 @@ class MusicClient():
             init_music_client_cfg = {
                 'search_size_per_source': 5, 'auto_set_proxies': False, 'random_update_ua': False, 'max_retries': 5,
                 'maintain_session': False, 'logger_handle': self.logger_handle, 'disable_print': True, 'work_dir': 'musicdl_outputs',
-                'proxy_sources': None, 'default_search_cookies': {}, 'default_download_cookies': {}, 'type': music_source
+                'proxy_sources': None, 'default_search_cookies': {}, 'default_download_cookies': {}, 'type': music_source,
+                'search_size_per_page': 10, 'strict_limit_search_size_per_page': True,
             }
             init_music_client_cfg.update(init_music_clients_cfg.get(music_source, {}))
             self.music_clients[music_source] = BuildMusicClient(module_cfg=init_music_client_cfg)
