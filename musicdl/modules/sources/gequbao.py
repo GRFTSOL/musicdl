@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from .base import BaseMusicClient
 from rich.progress import Progress
-from ..utils import legalizestring, byte2mb, resp2json, isvalidresp, usesearchheaderscookies, safeextractfromdict, AudioLinkTester
+from ..utils import legalizestring, resp2json, isvalidresp, usesearchheaderscookies, safeextractfromdict, AudioLinkTester
 
 
 '''GequbaoMusicClient'''
@@ -94,7 +94,7 @@ class GequbaoMusicClient(BaseMusicClient):
                 # --construct song_info
                 format_duration = lambda d: "{:02}:{:02}:{:02}".format(*([0] * (3 - len(d.split(":"))) + list(map(int, d.split(":")))))
                 duration = format_duration(download_result.get('mp3_duration', '00:00:00') or '00:00:00')
-                if duration == '00:00:00': duration = '--:--:--'
+                if duration == '00:00:00': duration = '-:-:-'
                 song_info = dict(
                     source=self.source, raw_data=dict(search_result=search_result, download_result=download_result, lyric_result=lyric_result), 
                     download_url_status=download_url_status, download_url=download_url, ext=download_result_suppl['ext'], file_size=download_result_suppl['file_size'], 

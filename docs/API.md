@@ -116,6 +116,7 @@ Thread settings and request overrides are automatically taken from `MusicClient.
 - `musicdl.modules.sources.mp3juice.MP3JuiceMusicClient`
 - `musicdl.modules.sources.mitu.MituMusicClient`
 - `musicdl.modules.sources.gequbao.GequbaoMusicClient`
+- `musicdl.modules.sources.yinyuedao.YinyuedaoMusicClient`
 
 End users usually **do not** instantiate `BaseMusicClient` directly, but instead use one of the specific clients above.
 The methods documented here describe the common behavior of all these clients.

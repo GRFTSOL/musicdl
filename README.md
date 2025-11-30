@@ -98,6 +98,7 @@ If you are a rights holder and believe this repository infringes your rights, pl
 |  [MP3JuiceMusicClient](https://mp3juice.co/)                         |  [MP3 Juice (SoundCloud+YouTube源)](https://mp3juice.co/)              |   ✓                |  ✓                   |    [mp3juice.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/mp3juice.py)        |
 |  [MituMusicClient](https://www.qqmp3.vip/)                           |  [米兔音乐](https://www.qqmp3.vip/)                                    |   ✓                |  ✓                   |    [mitu.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/mitu.py)                |
 |  [GequbaoMusicClient](https://www.gequbao.com/)                      |  [歌曲宝](https://www.gequbao.com/)                                    |   ✓                |  ✓                   |    [gequbao.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/gequbao.py)          |
+|  [YinyuedaoMusicClient](https://1mp3.top/)                           |  [音乐岛](https://1mp3.top/)                                           |   ✓                |  ✓                   |    [yinyuedao.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/yinyuedao.py)      |
 
 
 # 🧪 Playground
