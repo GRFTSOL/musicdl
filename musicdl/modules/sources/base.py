@@ -41,8 +41,8 @@ class AudioAwareColumn(ProgressColumn):
 class BaseMusicClient():
     source = 'BaseMusicClient'
     def __init__(self, search_size_per_source: int = 5, auto_set_proxies: bool = False, random_update_ua: bool = False, max_retries: int = 5, maintain_session: bool = False, 
-                 logger_handle: LoggerHandle = None, disable_print: bool = False, work_dir: str = 'musicdl_outputs', proxy_sources: list = None, default_search_cookies: dict = None,
-                 default_download_cookies: dict = None, search_size_per_page: int = 10, strict_limit_search_size_per_page: bool = True):
+                 logger_handle: LoggerHandle = None, disable_print: bool = False, work_dir: str = 'musicdl_outputs', proxy_sources: list = None, default_search_cookies: dict | str = None,
+                 default_download_cookies: dict | str = None, search_size_per_page: int = 10, strict_limit_search_size_per_page: bool = True):
         # set up work dir
         touchdir(work_dir)
         # set attributes
@@ -56,7 +56,9 @@ class BaseMusicClient():
         self.work_dir = work_dir
         self.proxy_sources = proxy_sources
         self.default_search_cookies = default_search_cookies or {}
+        if self.default_search_cookies and isinstance(self.default_search_cookies, str): self.default_search_cookies = dict(item.split("=", 1) for item in self.default_search_cookies.split("; "))
         self.default_download_cookies = default_download_cookies or {}
+        if self.default_download_cookies and isinstance(self.default_download_cookies, str): self.default_download_cookies = dict(item.split("=", 1) for item in self.default_download_cookies.split("; "))
         self.default_cookies = self.default_search_cookies
         self.search_size_per_page = min(search_size_per_source, search_size_per_page)
         self.strict_limit_search_size_per_page = strict_limit_search_size_per_page

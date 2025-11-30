@@ -1,5 +1,6 @@
 '''initialize'''
 from .lyric import WhisperLRC
+from .quarkparser import QuarkParser
 from .modulebuilder import BaseModuleBuilder
 from .logger import LoggerHandle, colorize, printtable, printfullline, smarttrunctable
 from .misc import (
