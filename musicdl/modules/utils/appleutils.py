@@ -485,11 +485,10 @@ class AppleMusicClientUtils:
     @staticmethod
     def download(download_item: DownloadItem, work_dir: str = './', silent: bool = False, codec: SongCodec = SongCodec.AAC_LEGACY, wrapper_decrypt_ip: str = "127.0.0.1:10020"):
         ext = download_item.stream_info.file_format.value
-        encrypted_path = os.path.join(work_dir, download_item.media_metadata["id"], f"{download_item.random_uuid}_encrypted.{ext}")
+        encrypted_path = os.path.join(work_dir, f"{download_item.random_uuid}_encrypted.{ext}")
         is_success = AppleMusicClientUtils.downloadstream(download_item.stream_info.audio_track.stream_url, encrypted_path, silent=silent)
-        assert is_success
-        decrypted_path = os.path.join(work_dir, download_item.media_metadata["id"], f"{download_item.random_uuid}_decrypted.{ext}")
-        download_item.staged_path = os.path.join(work_dir, download_item.media_metadata["id"], f"{download_item.random_uuid}_staged.{ext}")
+        decrypted_path = os.path.join(work_dir, f"{download_item.random_uuid}_decrypted.{ext}")
+        download_item.staged_path = os.path.join(work_dir, f"{download_item.random_uuid}_staged.{ext}")
         is_success = AppleMusicClientUtils.decrypt(
             encrypted_path=encrypted_path, decrypted_path=decrypted_path, final_path=download_item.final_path, decryption_key=download_item.decryption_key,
             codec=codec, media_id=download_item.media_metadata["id"], fairplay_key=download_item.stream_info.audio_track.fairplay_key, silent=silent,
@@ -541,7 +540,6 @@ class AppleMusicClientUtils:
     def decrypt(encrypted_path: str, decrypted_path: str, final_path: str, decryption_key: DecryptionKeyAv, codec: SongCodec, media_id: str, fairplay_key: str, silent: bool = False, wrapper_decrypt_ip: str = "127.0.0.1:10020", artist: str = ""):
         try:
             is_success = AppleMusicClientUtils._decryptmp4decrypt(encrypted_path, decrypted_path, decryption_key.audio_track.key, codec.islegacy(), silent=silent)
-            assert is_success
             is_success = AppleMusicClientUtils._remuxmp4box(decrypted_path, final_path, silent=silent, artist=artist)
         except:
             assert fairplay_key

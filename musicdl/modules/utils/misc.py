@@ -93,7 +93,9 @@ def byte2mb(size: int):
     try:
         size = int(float(size))
         if size == 0: return 'NULL'
-        size = f'{round(size / 1024 / 1024, 2)} MB'
+        size = round(size / 1024 / 1024, 2)
+        if size == 0.0: return 'NULL'
+        size = f'{size} MB'
     except:
         size = 'NULL'
     return size
@@ -180,7 +182,7 @@ class AudioLinkTester(object):
     ]
     AUDIO_CT_PREFIX = "audio/"
     AUDIO_CT_EXTRA = {
-        "application/octet-stream", "application/x-flac", "application/flac",
+        "application/octet-stream", "application/x-flac", "application/flac", "application/x-mpegurl"
     }
     CTYPE_TO_EXT = {
         "audio/mpeg": "mp3", "audio/mp3": "mp3", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/aac": "aac", "audio/wav": "wav", 

@@ -51,10 +51,12 @@ class AppleMusicClient(BaseMusicClient):
     '''_download'''
     @usedownloadheaderscookies
     def _download(self, song_info: dict, request_overrides: dict = None, downloaded_song_infos: list = [], progress: Progress = None, song_progress_id: int = 0):
+        if isinstance(song_info['download_url'], str): return super()._download(song_info=song_info, request_overrides=request_overrides, downloaded_song_infos=downloaded_song_infos, progress=progress, song_progress_id=song_progress_id)
         request_overrides = request_overrides or {}
         try:
             touchdir(song_info['work_dir'])
-            tmp_dir = os.path.join(song_info['work_dir'], song_info['identifier'])
+            tmp_dir = os.path.join(self.work_dir.replace(' ', ''), self.source.replace(' ', ''), song_info['identifier'].replace(' ', '')) # replace space to avoid bugs
+            touchdir(tmp_dir)
             download_item = song_info['download_url']
             save_path, same_name_file_idx = os.path.join(song_info['work_dir'], f"{song_info['song_name']}.{song_info['ext']}"), 1
             while os.path.exists(save_path):
@@ -66,10 +68,9 @@ class AppleMusicClient(BaseMusicClient):
             downloaded_song_info = copy.deepcopy(song_info)
             downloaded_song_info['save_path'] = save_path
             downloaded_song_infos.append(downloaded_song_info)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         except Exception as err:
             progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Error: {err})")
-        try: shutil.rmtree(tmp_dir, ignore_errors=True)
-        except: pass
         return downloaded_song_infos
     '''_fetchtoken'''
     def _fetchtoken(self, request_overrides: dict = None):
