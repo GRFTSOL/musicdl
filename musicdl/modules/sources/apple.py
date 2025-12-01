@@ -63,6 +63,8 @@ class AppleMusicClient(BaseMusicClient):
                 save_path = os.path.join(song_info['work_dir'], f"{song_info['song_name']}_{same_name_file_idx}.{song_info['ext']}")
                 same_name_file_idx += 1
             download_item.final_path = save_path
+            progress.update(song_progress_id, total=1)
+            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Downloading")
             AppleMusicClientUtils.download(download_item, work_dir=tmp_dir)
             progress.advance(song_progress_id, 1)
             progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Success)")
