@@ -6,7 +6,6 @@ Author:
 WeChat Official Account (微信公众号):
     Charles的皮卡丘
 '''
-import os
 import re
 import time
 import copy
@@ -17,7 +16,7 @@ from Crypto.Cipher import AES
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils import byte2mb, resp2json, isvalidresp, seconds2hms, legalizestring, safeextractfromdict, usesearchheaderscookies, AudioLinkTester, WhisperLRC
+from ..utils import byte2mb, resp2json, seconds2hms, legalizestring, safeextractfromdict, usesearchheaderscookies, SongInfo
 
 
 '''XimalayaMusicClient'''
@@ -74,12 +73,13 @@ class XimalayaMusicClient(BaseMusicClient):
             search_results = resp2json(resp)['data']
             for search_result in search_results:
                 # --download results
-                if 'trackId' not in search_result:
+                if (not isinstance(search_result, dict)) or 'trackId' not in search_result:
                     continue
-                download_result, download_url, ext, file_size, duration = {}, "", "m4a", "0", "0"
+                song_info = SongInfo(source=self.source)
                 # ----try http://mobile.ximalaya.com/v1/track/ca/playpage/{trackId} first
-                resp = self.get(f'http://mobile.ximalaya.com/v1/track/ca/playpage/{search_result["trackId"]}', **request_overrides)
-                if isvalidresp(resp):
+                try:
+                    resp = self.get(f'http://mobile.ximalaya.com/v1/track/ca/playpage/{search_result["trackId"]}', **request_overrides)
+                    resp.raise_for_status()
                     download_result: dict = json_repair.loads(resp.text)
                     track_info = safeextractfromdict(download_result, ['trackInfo'], {})
                     qualities = [
@@ -87,80 +87,71 @@ class XimalayaMusicClient(BaseMusicClient):
                         ('playUrl32Size', 'playUrl32'), ('downloadSize', 'downloadUrl'), ('playPathAacv224Size', 'playPathAacv224'),
                     ]
                     for quality in qualities:
-                        file_size, download_url = track_info.get(quality[0], '0'), track_info.get(quality[1], '')
+                        song_info = SongInfo(source=self.source)
+                        file_size, download_url = track_info.get(quality[0], 0), track_info.get(quality[1], '')
                         if not download_url: continue
                         ext = download_url.split('.')[-1].split('?')[0]
-                        duration = seconds2hms(track_info.get('duration', '0'))
-                        download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url, request_overrides)
-                        if download_url_status['ok']: break
-                    if not download_url or not download_url_status['ok']:
-                        download_result, download_url, ext, file_size, duration = {}, "", "m4a", "0", "0"
+                        download_url_status = self.audio_link_tester.test(download_url, request_overrides)
+                        song_info.update(dict(
+                            download_url=download_url, download_url_status=download_url_status, ext=ext, file_size_bytes=file_size, file_size=byte2mb(file_size),
+                            raw_data={'search': search_result, 'download': download_result}, duration_s=track_info.get('duration', 0), duration=seconds2hms(track_info.get('duration', 0)),
+                        ))
+                        if song_info.with_valid_download_url: break
+                except:
+                    pass
                 # ----try https://www.ximalaya.com/mobile-playpage/track/v3/baseInfo/ second
-                if not download_result or not download_url:
+                if not song_info.with_valid_download_url:
                     params = {"device": "web", "trackId": search_result["trackId"], "trackQualityLevel": 2}
-                    resp = self.get(f"https://www.ximalaya.com/mobile-playpage/track/v3/baseInfo/{int(time.time() * 1000)}", params=params, **request_overrides)
-                    download_result = resp2json(resp)
-                    track_info = safeextractfromdict(download_result, ['trackInfo'], {})
-                    for encrypted_url in sorted(safeextractfromdict(track_info, ['playUrlList'], []), key=lambda x: int(x['fileSize']), reverse=True):
-                        download_url = self._decrypturl(encrypted_url.get('url', ''))
+                    try:
+                        resp = self.get(f"https://www.ximalaya.com/mobile-playpage/track/v3/baseInfo/{int(time.time() * 1000)}", params=params, **request_overrides)
+                        resp.raise_for_status()
+                        download_result = resp2json(resp)
+                        track_info = safeextractfromdict(download_result, ['trackInfo'], {})
+                        for encrypted_url in sorted(safeextractfromdict(track_info, ['playUrlList'], []), key=lambda x: int(x['fileSize']), reverse=True):
+                            song_info = SongInfo(source=self.source)
+                            download_url = self._decrypturl(encrypted_url.get('url', ''))
+                            if not download_url: continue
+                            ext = download_url.split('.')[-1].split('?')[0]
+                            download_url_status = self.audio_link_tester.test(download_url, request_overrides)
+                            song_info.update(dict(
+                                download_url=download_url, download_url_status=download_url_status, ext=ext, duration=seconds2hms(track_info.get('duration', 0)),
+                                raw_data={'search': search_result, 'download': download_result}, duration_s=track_info.get('duration', 0), 
+                            ))
+                            if song_info.with_valid_download_url: break
+                    except:
+                        pass
+                # ----try https://api.cenguigui.cn/api/music/dg_ximalayamusic.php finally
+                if (not song_info.with_valid_download_url) and ('n' in search_result):
+                    song_info = SongInfo(source=self.source)
+                    params = {'msg': keyword, 'n': search_result['n'], 'num': self.search_size_per_source, 'type': 'json'}
+                    try:
+                        resp = self.get('https://api.cenguigui.cn/api/music/dg_ximalayamusic.php', params=params, **request_overrides)
+                        download_result = resp2json(resp)
+                        download_url = download_result.get('url', '')
                         if not download_url: continue
                         ext = download_url.split('.')[-1].split('?')[0]
-                        duration = seconds2hms(track_info.get('duration', '0'))
-                        download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url, request_overrides)
-                        if download_url_status['ok']: break
-                    if not download_url or not download_url_status['ok']:
-                        download_result, download_url, ext, file_size, duration = {}, "", "m4a", "0", "0"
-                # ----try https://api.cenguigui.cn/api/music/dg_ximalayamusic.php finally
-                if (not download_result or not download_url) and ('n' in search_result):
-                    params = {'msg': keyword, 'n': search_result['n'], 'num': self.search_size_per_source, 'type': 'json'}
-                    resp = self.get('https://api.cenguigui.cn/api/music/dg_ximalayamusic.php', params=params, **request_overrides)
-                    download_result = resp2json(resp)
-                    download_url = download_result.get('url', '')
-                    if download_url:
-                        try:
-                            download_result_suppl = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).probe(download_url, request_overrides)
-                        except:
-                            download_result_suppl = {'download_url': download_url, 'file_size': '0', 'ext': 'NULL'}
-                        if download_result_suppl['ext'] == 'NULL':
-                            download_result_suppl['ext'] = download_url.split('.')[-1].split('?')[0]
-                        download_result['download_result_suppl'] = download_result_suppl
-                        download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url, request_overrides)
-                        ext, file_size = download_result_suppl['ext'], download_result_suppl['file_size']
-                        duration = '-:-:-'
-                    else:
-                        download_result, download_url, ext, file_size, duration = {}, "", "m4a", "0", "0"
-                # ----parse more infos
-                if not download_url: continue
-                if not download_url_status['ok']: continue
-                if byte2mb(file_size) == 'NULL' and 'download_result_suppl' not in download_result:
-                    try:
-                        download_result_suppl = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).probe(download_url, request_overrides)
-                        ext, file_size = download_result_suppl['ext'], download_result_suppl['file_size']
-                        download_result['download_result_suppl'] = download_result_suppl
+                        download_url_status = self.audio_link_tester.test(download_url, request_overrides)
+                        song_info.update(dict(
+                            download_url=download_url, download_url_status=download_url_status, raw_data={'search': search_result, 'download': download_result},
+                            duration='-:-:-', ext=ext,
+                        ))
                     except:
                         continue
-                else:
-                    file_size = byte2mb(file_size)
-                # --lyric results
-                try:
-                    if os.environ.get('ENABLE_WHISPERLRC', 'False').lower() == 'true':
-                        lyric_result = WhisperLRC(model_size_or_path='small').fromurl(
-                            download_url, headers=self.default_download_headers, cookies=self.default_download_cookies, request_overrides=request_overrides
-                        )
-                        lyric = lyric_result['lyric']
-                    else:
-                        lyric_result, lyric = dict(), 'NULL'
-                except:
-                    lyric_result, lyric = dict(), 'NULL'
-                # --construct song_info
-                song_info = dict(
-                    source=self.source, raw_data=dict(search_result=search_result, download_result=download_result, lyric_result=lyric_result), 
-                    download_url_status=download_url_status, download_url=download_url, ext=ext, file_size=file_size, 
-                    lyric=lyric, duration=duration, song_name=legalizestring(search_result.get('title', 'NULL'), replace_null_string='NULL'), 
+                # ----parse more infos
+                if not song_info.with_valid_download_url: continue
+                song_info.download_url_status['prob_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
+                ext, file_size = song_info.download_url_status['prob_status']['ext'], song_info.download_url_status['prob_status']['file_size']
+                if file_size and file_size != 'NULL': song_info.file_size = file_size
+                if not song_info.file_size: song_info.file_size = 'NULL'
+                if ext and ext != 'NULL': song_info.ext = ext
+                lyric_result, lyric = dict(), 'NULL'
+                song_info.raw_data['lyric'] = lyric_result
+                song_info.update(dict(
+                    lyric=lyric, song_name=legalizestring(search_result.get('title', 'NULL'), replace_null_string='NULL'), 
                     singers=legalizestring(search_result.get('Nickname', 'NULL'), replace_null_string='NULL'), 
                     album=legalizestring(search_result.get('album_title', 'NULL'), replace_null_string='NULL'),
                     identifier=search_result['trackId'],
-                )
+                ))
                 # --append to song_infos
                 song_infos.append(song_info)
                 # --judgement for search_size

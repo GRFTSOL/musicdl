@@ -6,12 +6,11 @@ Author:
 WeChat Official Account (微信公众号):
     Charles的皮卡丘
 '''
-import os
 import copy
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils import legalizestring, resp2json, seconds2hms, usesearchheaderscookies, AudioLinkTester, WhisperLRC
+from ..utils import legalizestring, resp2json, seconds2hms, usesearchheaderscookies, SongInfo
 
 
 '''LizhiMusicClient'''
@@ -65,42 +64,36 @@ class LizhiMusicClient(BaseMusicClient):
             search_results = resp2json(resp)['data']
             for search_result in search_results:
                 # --download results
-                if ('userInfo' not in search_result) or ('voiceInfo' not in search_result) or ('voicePlayProperty' not in search_result) or ('voiceId' not in search_result['voiceInfo']):
+                if (not isinstance(search_result, dict)) or ('userInfo' not in search_result) or ('voiceInfo' not in search_result) or ('voicePlayProperty' not in search_result) or ('voiceId' not in search_result['voiceInfo']):
                     continue
+                song_info = SongInfo(source=self.source)
                 download_url = search_result['voicePlayProperty'].get('trackUrl', '')
                 if not download_url: continue
                 for quality in ['_ud.mp3', '_hd.mp3', '_sd.m4a']:
-                    download_url = download_url[:-7] + quality
-                    download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url, request_overrides)
-                    if download_url_status['ok']: break
-                if not download_url_status['ok']: continue
-                duration = seconds2hms(search_result['voiceInfo'].get('duration', '0'))
-                try:
-                    download_result = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).probe(download_url, request_overrides)
-                except:
-                    download_result = {'download_url': download_url, 'file_size': 'NULL', 'ext': 'NULL'}
-                if download_result['ext'] == 'NULL':
-                    download_result['ext'] = download_url.split('.')[-1].split('?')[0] or 'mp3'
-                # --lyric results, WhisperLRC runs very slowly, disable it by default
-                try:
-                    if os.environ.get('ENABLE_WHISPERLRC', 'False').lower() == 'true':
-                        lyric_result = WhisperLRC(model_size_or_path='small').fromurl(
-                            download_url, headers=self.default_download_headers, cookies=self.default_download_cookies, request_overrides=request_overrides
-                        )
-                        lyric = lyric_result['lyric']
-                    else:
-                        lyric_result, lyric = dict(), 'NULL'
-                except:
-                    lyric_result, lyric = dict(), 'NULL'
-                # --construct song_info
-                song_info = dict(
-                    source=self.source, raw_data=dict(search_result=search_result, download_result=download_result, lyric_result=lyric_result), 
-                    download_url_status=download_url_status, download_url=download_url, ext=download_result['ext'], file_size=download_result['file_size'], 
-                    lyric=lyric, duration=duration, song_name=legalizestring(search_result['voiceInfo'].get('name', 'NULL'), replace_null_string='NULL'), 
+                    download_url: str = download_url[:-7] + quality
+                    ext = download_url.split('.')[-1].split('?')[0] or 'mp3'
+                    song_info = SongInfo(
+                        source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides), ext=ext,
+                        raw_data={'search': search_result, 'download': {}},
+                    )
+                    if song_info.with_valid_download_url: break
+                if not song_info.with_valid_download_url: continue
+                song_info.update(
+                    duration=seconds2hms(search_result['voiceInfo'].get('duration', 0)), duration_s=search_result['voiceInfo'].get('duration', 0)
+                )
+                song_info.download_url_status['prob_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
+                ext, file_size = song_info.download_url_status['prob_status']['ext'], song_info.download_url_status['prob_status']['file_size']
+                if file_size and file_size != 'NULL': song_info.file_size = file_size
+                if not song_info.file_size: song_info.file_size = 'NULL'
+                if ext and ext != 'NULL': song_info.ext = ext
+                lyric_result, lyric = dict(), 'NULL'
+                song_info.raw_data['lyric'] = lyric_result
+                song_info.update(dict(
+                    lyric=lyric, song_name=legalizestring(search_result['voiceInfo'].get('name', 'NULL'), replace_null_string='NULL'), 
                     singers=legalizestring(search_result['userInfo'].get('name', 'NULL'), replace_null_string='NULL'), 
                     album=legalizestring(search_result['voiceInfo'].get('lableName', 'NULL'), replace_null_string='NULL'),
                     identifier=search_result['voiceInfo']['voiceId'],
-                )
+                ))
                 # --append to song_infos
                 song_infos.append(song_info)
                 # --judgement for search_size
