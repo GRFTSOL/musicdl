@@ -11,7 +11,7 @@ import base64
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils import legalizestring, byte2mb, resp2json, isvalidresp, seconds2hms, usesearchheaderscookies, AudioLinkTester
+from ..utils import legalizestring, byte2mb, resp2json, seconds2hms, usesearchheaderscookies, safeextractfromdict, SongInfo
 
 
 '''KugouMusicClient'''
@@ -58,41 +58,73 @@ class KugouMusicClient(BaseMusicClient):
             search_results = resp2json(resp)['data']['lists']
             for search_result in search_results:
                 # --download results
-                if 'FileHash' not in search_result:
+                if not isinstance(search_result, dict) or ('FileHash' not in search_result):
                     continue
-                resp = self.get(f"http://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash={search_result['FileHash']}", **request_overrides)
-                if not isvalidresp(resp): continue
-                download_result: dict = resp2json(resp)
-                download_url = download_result.get('url') or download_result.get('backup_url')
-                if not download_url: continue
-                if isinstance(download_url, list): download_url = download_url[0]
-                download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url, request_overrides)
-                if not download_url_status['ok']: continue
-                file_size = byte2mb(download_result.get('fileSize', '0'))
-                duration = seconds2hms(download_result.get('timeLength', '0'))
-                # --lyric results
-                params = {'keyword': search_result.get('FileName', ''), 'duration': search_result.get('Duration', '99999'), 'hash': search_result['FileHash']}
-                resp = self.get('http://lyrics.kugou.com/search', params=params, **request_overrides)
-                if isvalidresp(resp):
-                    lyric_result, lyric = resp2json(resp), 'NULL'
-                    try:
-                        id = lyric_result['candidates'][0]['id']
-                        accesskey = lyric_result['candidates'][0]['accesskey']
-                        lyric = self.get(f'http://lyrics.kugou.com/download?ver=1&client=pc&id={id}&accesskey={accesskey}&fmt=lrc&charset=utf8').json()['content']
-                        lyric = base64.b64decode(lyric).decode('utf-8')
-                    except:
-                        lyric = 'NULL'
-                else:
-                    lyric_result, lyric = dict(), 'NULL'
-                # --construct song_info
-                song_info = dict(
-                    source=self.source, raw_data=dict(search_result=search_result, download_result=download_result, lyric_result=lyric_result), 
-                    download_url_status=download_url_status, download_url=download_url, ext=download_result.get('extName', 'mp3'), file_size=file_size, 
-                    lyric=lyric, duration=duration, song_name=legalizestring(search_result.get('SongName', 'NULL'), replace_null_string='NULL'), 
+                song_info = SongInfo(source=self.source)
+                try:
+                    resp = self.get(f"http://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash={search_result['FileHash']}", **request_overrides)
+                    resp.raise_for_status()
+                    download_result_default: dict = resp2json(resp)
+                except:
+                    continue
+                better_hashes = [
+                    safeextractfromdict(download_result_default, ['extra', 'highhash'], ""), safeextractfromdict(download_result_default, ['extra', 'sqhash'], ""),
+                    safeextractfromdict(download_result_default, ['extra', '320hash'], ""), safeextractfromdict(download_result_default, ['extra', '128hash'], ""),
+                ]
+                for better_hash in better_hashes:
+                    if not better_hash: continue
+                    if better_hash == search_result['FileHash']:
+                        download_result = download_result_default
+                        download_url = download_result.get('url') or download_result.get('backup_url')
+                        if not download_url: continue
+                        if isinstance(download_url, list): download_url = download_url[0]
+                        song_info = SongInfo(
+                            source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
+                        )
+                        if song_info.with_valid_download_url: break
+                    else:
+                        try:
+                            resp = self.get(f"http://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash={better_hash}", **request_overrides)
+                            resp.raise_for_status()
+                            download_result: dict = resp2json(resp)
+                            download_url = download_result.get('url') or download_result.get('backup_url')
+                            if not download_url: continue
+                            if isinstance(download_url, list): download_url = download_url[0]
+                            song_info = SongInfo(
+                                source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
+                            )
+                            if song_info.with_valid_download_url: break
+                        except:
+                            continue
+                if not song_info.with_valid_download_url: continue
+                song_info.update(dict(
+                    file_size_bytes=download_result.get('fileSize', 0), file_size=byte2mb(download_result.get('fileSize', 0)),
+                    duration_s=download_result.get('timeLength', 0), duration=seconds2hms(download_result.get('timeLength', 0)),
+                    raw_data={'search': search_result, 'download': download_result}, ext=download_result.get('extName', 'mp3'),
+                    song_name=legalizestring(search_result.get('SongName', 'NULL'), replace_null_string='NULL'), 
                     singers=legalizestring(search_result.get('SingerName', 'NULL'), replace_null_string='NULL'), 
                     album=legalizestring(search_result.get('AlbumName', 'NULL'), replace_null_string='NULL'),
-                    identifier=search_result['FileHash'],
-                )
+                    identifier=better_hash,
+                ))
+                if song_info.song_name == 'NULL': song_info.song_name = legalizestring(search_result.get('FileName', 'NULL'), replace_null_string='NULL')
+                if song_info.song_name == 'NULL': song_info.song_name = legalizestring(search_result.get('OriSongName', 'NULL'), replace_null_string='NULL')
+                # --lyric results
+                params = {'keyword': search_result.get('FileName', ''), 'duration': search_result.get('Duration', '99999'), 'hash': better_hash}
+                try:
+                    resp = self.get('http://lyrics.kugou.com/search', params=params, **request_overrides)
+                    resp.raise_for_status()
+                    lyric_result = resp2json(resp=resp)
+                    id = lyric_result['candidates'][0]['id']
+                    accesskey = lyric_result['candidates'][0]['accesskey']
+                    resp = self.get(f'http://lyrics.kugou.com/download?ver=1&client=pc&id={id}&accesskey={accesskey}&fmt=lrc&charset=utf8', **request_overrides)
+                    resp.raise_for_status()
+                    lyric_result['lyrics.kugou.com/download'] = resp2json(resp=resp)
+                    lyric = lyric_result['lyrics.kugou.com/download']['content']
+                    lyric = base64.b64decode(lyric).decode('utf-8')
+                except:
+                    lyric_result, lyric = dict(), 'NULL'
+                song_info.raw_data['lyric'] = lyric_result
+                song_info.lyric = lyric
                 # --append to song_infos
                 song_infos.append(song_info)
                 # --judgement for search_size

@@ -7,10 +7,11 @@ WeChat Official Account (微信公众号):
     Charles的皮卡丘
 '''
 import copy
+import uuid
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils import legalizestring, resp2json, isvalidresp, seconds2hms, usesearchheaderscookies, AudioLinkTester
+from ..utils import legalizestring, resp2json, seconds2hms, usesearchheaderscookies, SongInfo
 
 
 '''KuwoMusicClient'''
@@ -20,6 +21,10 @@ class KuwoMusicClient(BaseMusicClient):
         super(KuwoMusicClient, self).__init__(**kwargs)
         self.default_search_headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+            'Referer': 'http://www.kuwo.cn/',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Origin': 'http://www.kuwo.cn',
         }
         self.default_download_headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
@@ -33,7 +38,7 @@ class KuwoMusicClient(BaseMusicClient):
         # search rules
         default_rule = {
             "vipver": "1", "client": "kt", "ft": "music", "cluster": "0", "strategy": "2012", "encoding": "utf8",
-            "rformat": "json", "mobi": "1", "issubtitle": "1", "show_copyright_off": "1", "pn": "1", "rn": "10",
+            "rformat": "json", "mobi": "1", "issubtitle": "1", "show_copyright_off": "1", "pn": "0", "rn": "10",
             "all": keyword,
         }
         default_rule.update(rule)
@@ -43,7 +48,7 @@ class KuwoMusicClient(BaseMusicClient):
         while self.search_size_per_source > count:
             page_rule = copy.deepcopy(default_rule)
             page_rule['rn'] = page_size
-            page_rule['pn'] = str(int(count // page_size) + 1)
+            page_rule['pn'] = str(int(count // page_size))
             search_urls.append(base_url + urlencode(page_rule))
             count += page_size
         # return
@@ -61,8 +66,26 @@ class KuwoMusicClient(BaseMusicClient):
             search_results = resp2json(resp)['abslist']
             for search_result in search_results:
                 # --download results
-                if 'MUSICRID' not in search_result:
+                if not isinstance(search_result, dict) or ('MUSICRID' not in search_result):
                     continue
+                song_info = SongInfo(source=self.source)
+                # ----try "http://www.kuwo.cn/api/v1/www/music/playUrl" first
+                brs = ['flac', '320kmp3', '192kmp3', '128kmp3']
+                for br in brs:
+                    try:
+                        params = {
+                            'mid': search_result['MUSICRID'].removeprefix('MUSIC_'), 'type': 'music', 'httpsStatus': '1', 'plat': 'web_www', 'from': '', 'br': br,
+                            'reqId': str(uuid.uuid4()),
+                        }
+                        resp = self.get("http://www.kuwo.cn/api/v1/www/music/playUrl", **request_overrides)
+                        resp.raise_for_status()
+                        download_result = resp2json(resp=resp)
+                        print(download_result)
+                    except:
+                        continue
+                print(search_result['MUSICRID'])
+                return
+
                 params = {'format': 'aac|mp3', 'rid': search_result['MUSICRID'], 'type': 'convert_url', 'response': 'url'}
                 resp = self.get('http://antiserver.kuwo.cn/anti.s', params=params, **request_overrides)
                 if not isvalidresp(resp): continue
@@ -98,6 +121,10 @@ class KuwoMusicClient(BaseMusicClient):
                     album=legalizestring(search_result.get('ALBUM', 'NULL'), replace_null_string='NULL'),
                     identifier=search_result['MUSICRID'],
                 )
+
+
+
+
                 # --append to song_infos
                 song_infos.append(song_info)
                 # --judgement for search_size

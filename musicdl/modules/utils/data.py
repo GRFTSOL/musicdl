@@ -8,6 +8,7 @@ WeChat Official Account (微信公众号):
 '''
 from __future__ import annotations
 import os
+from .misc import sanitize_filepath
 from typing import Any, Dict, Optional
 from dataclasses import dataclass, field, fields
 
@@ -50,10 +51,11 @@ class SongInfo:
     work_dir: Optional[str] = './'
     @property
     def save_path(self) -> str:
-        sp, same_name_file_idx = os.path.join(self.work_dir, f"{self.song_name}.{self.ext.removeprefix('.')}"), 1
+        sp, same_name_file_idx = os.path.join(self.work_dir, f"{self.song_name} - {self.identifier}.{self.ext.removeprefix('.')}"), 1
         while os.path.exists(sp):
-            sp = os.path.join(self.work_dir, f"{self.song_name}_{same_name_file_idx}.{self.ext.removeprefix('.')}")
+            sp = os.path.join(self.work_dir, f"{self.song_name} - {self.identifier} ({same_name_file_idx}).{self.ext.removeprefix('.')}")
             same_name_file_idx += 1
+        sp = sanitize_filepath(sp)
         return sp
     # identifier
     identifier: Optional[str] = None
