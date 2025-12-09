@@ -8,8 +8,8 @@ WeChat Official Account (微信公众号):
 '''
 import os
 import copy
-import pickle
 import requests
+import cloudpickle
 from rich.text import Text
 from datetime import datetime
 from rich.progress import Task
@@ -259,4 +259,4 @@ class BaseMusicClient():
     def _savetopkl(self, data, file_path, auto_sanitize=True):
         if auto_sanitize: file_path = sanitize_filepath(file_path)
         with open(file_path, 'wb') as fp:
-            pickle.dump(data, fp)
+            cloudpickle.dump(data, fp)
