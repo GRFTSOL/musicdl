@@ -21,10 +21,6 @@ class KuwoMusicClient(BaseMusicClient):
         super(KuwoMusicClient, self).__init__(**kwargs)
         self.default_search_headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
-            'Referer': 'http://www.kuwo.cn/',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-            'Origin': 'http://www.kuwo.cn',
         }
         self.default_download_headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
@@ -69,62 +65,89 @@ class KuwoMusicClient(BaseMusicClient):
                 if not isinstance(search_result, dict) or ('MUSICRID' not in search_result):
                     continue
                 song_info = SongInfo(source=self.source)
-                # ----try "http://www.kuwo.cn/api/v1/www/music/playUrl" first
-                brs = ['flac', '320kmp3', '192kmp3', '128kmp3']
+                brs = ['4000kflac', '2000kflac', 'flac', '320kmp3', '192kmp3', '128kmp3']
+                # ----try "https://mobi.kuwo.cn/mobi.s" first
                 for br in brs:
                     try:
-                        params = {
-                            'mid': search_result['MUSICRID'].removeprefix('MUSIC_'), 'type': 'music', 'httpsStatus': '1', 'plat': 'web_www', 'from': '', 'br': br,
-                            'reqId': str(uuid.uuid4()),
-                        }
-                        resp = self.get("http://www.kuwo.cn/api/v1/www/music/playUrl", **request_overrides)
+                        resp = self.get(f"https://mobi.kuwo.cn/mobi.s?f=web&source=kwplayercar_ar_6.0.0.9_B_jiakong_vh.apk&from=PC&type=convert_url_with_sign&br={br}&rid={search_result['MUSICRID'].removeprefix('MUSIC_')}&&user=C_APK_guanwang_12609069939969033731", **request_overrides)
                         resp.raise_for_status()
                         download_result = resp2json(resp=resp)
-                        print(download_result)
+                        download_url = download_result['data']['url']
+                        song_info = SongInfo(
+                            source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
+                            ext=download_result['data']['format'], duration_s=download_result['data']['duration'], duration=seconds2hms(download_result['data']['duration']),
+                            raw_data={'search': search_result, 'download': download_result},
+                        )
+                        if song_info.with_valid_download_url: break
                     except:
                         continue
-                print(search_result['MUSICRID'])
-                return
-
-                params = {'format': 'aac|mp3', 'rid': search_result['MUSICRID'], 'type': 'convert_url', 'response': 'url'}
-                resp = self.get('http://antiserver.kuwo.cn/anti.s', params=params, **request_overrides)
-                if not isvalidresp(resp): continue
-                download_url = resp.text.strip()
-                if (not download_url) or (not (download_url.startswith('http://') or download_url.startswith('https://'))):
-                    continue
-                download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url, request_overrides)
-                if not download_url_status['ok']: continue
-                try:
-                    download_result = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).probe(download_url, request_overrides)
-                except:
-                    download_result = {'download_url': download_url, 'file_size': 'NULL', 'ext': 'NULL'}
-                if download_result['ext'] == 'NULL':
-                    download_result['ext'] = download_url.split('.')[-1].split('?')[0] or 'mp3'
-                duration = seconds2hms(search_result.get('DURATION', '0'))
-                # --lyric results
-                params = {'musicId': search_result['MUSICRID'].removeprefix('MUSIC_'), 'httpsStatus': '1'}
-                resp = self.get('http://m.kuwo.cn/newh5/singles/songinfoandlrc', params=params, **request_overrides)
-                if isvalidresp(resp):
-                    lyric_result: dict = resp2json(resp)
+                # ----try "https://www.kuwo.cn/api/v1/www/music/playUrl", second
+                if not song_info.with_valid_download_url:
+                    headers = {
+                        "Cookie": (
+                            "Hm_lvt_cdb524f42f0ce19b169a8071123a4797=1747998937; HMACCOUNT=3E88140C4BD6BF25; _ga=GA1.2.2122710619.1747998937; _gid=GA1.2.1827944406.1747998937; "
+                            "gtoken=RNbrzHWRp6DY; gid=d55a4884-42aa-4733-98eb-e7aaffc6122e; JSESSIONID=us1icx6617iy1k1ksiuykje71; Hm_lpvt_cdb524f42f0ce19b169a8071123a4797=1748000521; "
+                            "_gat=1; _ga_ETPBRPM9ML=GS2.2.s1747998937$o1$g1$t1748000535$j45$l0$h0; Hm_Iuvt_cdb524f42f23cer9b268564v7y735ewrq2324=jbikFazGJzBjt2bhSJGMxGfkM5zNYcis"
+                        ),
+                        "secret": "4932e2c95746126c945fe2fb3f88d3455b85b69a4fbdfa6c44b501d7dfe50cff04eb9a8e",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+                    }
+                    for br in brs:
+                        params = {'mid': search_result['MUSICRID'].removeprefix('MUSIC_'), 'type': 'music', 'httpsStatus': '1', 'br': br}
+                        try:
+                            resp = self.get('https://www.kuwo.cn/api/v1/www/music/playUrl', params=params, headers=headers, **request_overrides)
+                            resp.raise_for_status()
+                            download_result = resp2json(resp=resp)
+                            download_url = download_result['data']['url']
+                            ext = download_url.split('.')[-1].split('?')[0] or 'mp3'
+                            song_info = SongInfo(
+                                source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
+                                ext=ext, duration_s=search_result.get('DURATION', 0), duration=seconds2hms(search_result.get('DURATION', 0)),
+                                raw_data={'search': search_result, 'download': download_result},
+                            )
+                            if song_info.with_valid_download_url: break
+                        except:
+                            continue
+                # ----try "http://antiserver.kuwo.cn/anti.s" finally (br only up to 320kmp3)
+                if not song_info.with_valid_download_url:
+                    params = {'format': 'aac|mp3', 'rid': search_result['MUSICRID'].removeprefix('MUSIC_'), 'type': 'convert_url3', 'response': 'url', 'br': '320kmp3'}
                     try:
-                        lyric = lyric_result.get('data', {}).get('lrclist', []) or 'NULL'
+                        resp = self.get('http://antiserver.kuwo.cn/anti.s', params=params, **request_overrides)
+                        resp.raise_for_status()
+                        download_result = resp2json(resp=resp)
+                        download_url = download_result['url']
+                        ext = download_url.split('.')[-1].split('?')[0] or 'mp3'
+                        song_info = SongInfo(
+                            source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
+                            ext=ext, duration_s=search_result.get('DURATION', 0), duration=seconds2hms(search_result.get('DURATION', 0)),
+                            raw_data={'search': search_result, 'download': download_result},
+                        )
                     except:
-                        lyric = 'NULL'
-                else:
-                    lyric_result, lyric = {}, 'NULL'
-                # --construct song_info
-                song_info = dict(
-                    source=self.source, raw_data=dict(search_result=search_result, download_result=download_result, lyric_result=lyric_result), 
-                    download_url_status=download_url_status, download_url=download_url, ext=download_result['ext'], file_size=download_result['file_size'], 
-                    lyric=lyric, duration=duration, song_name=legalizestring(search_result.get('SONGNAME', 'NULL'), replace_null_string='NULL'), 
+                        continue
+                if not song_info.with_valid_download_url: continue
+                # ----parse other information
+                song_info.update(dict(
+                    song_name=legalizestring(search_result.get('SONGNAME', 'NULL'), replace_null_string='NULL'), 
                     singers=legalizestring(search_result.get('ARTIST', 'NULL'), replace_null_string='NULL'), 
                     album=legalizestring(search_result.get('ALBUM', 'NULL'), replace_null_string='NULL'),
                     identifier=search_result['MUSICRID'],
-                )
-
-
-
-
+                ))
+                song_info.download_url_status['prob_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
+                ext, file_size = song_info.download_url_status['prob_status']['ext'], song_info.download_url_status['prob_status']['file_size']
+                if file_size and file_size != 'NULL': song_info.file_size = file_size
+                if not song_info.file_size: song_info.file_size = 'NULL'
+                if ext and ext != 'NULL': song_info.ext = ext
+                # --lyric results
+                params = {'musicId': search_result['MUSICRID'].removeprefix('MUSIC_'), 'httpsStatus': '1'}
+                try:
+                    resp = self.get('http://m.kuwo.cn/newh5/singles/songinfoandlrc', params=params, **request_overrides)
+                    resp.raise_for_status()
+                    lyric_result: dict = resp2json(resp)
+                    lyric = lyric_result.get('data', {}).get('lrclist', []) or 'NULL'
+                except:
+                    lyric_result, lyric = {}, 'NULL'
+                song_info.raw_data['lyric'] = lyric_result
+                song_info.lyric = lyric
                 # --append to song_infos
                 song_infos.append(song_info)
                 # --judgement for search_size
