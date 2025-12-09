@@ -191,16 +191,16 @@ If you want the quickest way to run musicdl to verify that your environment meet
 ```python
 from musicdl import musicdl
 
-music_client = musicdl.MusicClient(music_sources=['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient'])
+music_client = musicdl.MusicClient(music_sources=['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KugouMusicClient', 'KuwoMusicClient', 'QianqianMusicClient'])
 music_client.startcmdui()
 ```
 
-The above code runs musicdl using `MiguMusicClient`, `NeteaseMusicClient`, and `QQMusicClient` as both the search sources and download sources.
+The above code runs musicdl using `MiguMusicClient`, `NeteaseMusicClient`, `QQMusicClient`, `KugouMusicClient`, `KuwoMusicClient` and `QianqianMusicClient` as both the search sources and download sources.
 
 Of course, you can also run musicdl by entering the following equivalent command directly in the command line,
 
 ```bash
-musicdl -m NeteaseMusicClient,MiguMusicClient,QQMusicClient
+musicdl -m NeteaseMusicClient,MiguMusicClient,QQMusicClient,KugouMusicClient,KuwoMusicClient,QianqianMusicClient
 ```
 
 The demonstration is as follows,
@@ -228,12 +228,12 @@ Options:
   -m, --music-sources, --music_sources TEXT
                                   The music search and download sources.
                                   [default: MiguMusicClient,NeteaseMusicClient
-                                  ,QQMusicClient]
+                                  ,QQMusicClient,KugouMusicClient,KuwoMusicClient,QianqianMusicClient]
   -i, --init-music-clients-cfg, --init_music_clients_cfg TEXT
                                   Config such as `work_dir` for each music
                                   client as a JSON string.
   -r, --requests-overrides, --requests_overrides TEXT
-                                  Requests.get kwargs such as `headers` and
+                                  Requests.get / Requests.post kwargs such as `headers` and
                                   `proxies` for each music client as a JSON
                                   string.
   -c, --clients-threadings, --clients_threadings TEXT

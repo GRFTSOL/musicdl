@@ -80,16 +80,16 @@ Each per-source result is a list of song info dictionaries, which typically incl
 
 - **Returns**:
   
-  - `dict[str, list[dict]]:` A mapping from music source name (*e.g.*, `"NeteaseMusicClient"`) to a list of song info dictionaries returned by that source.
+  - `dict[str, list[SongInfo]]`: A mapping from music source name (*e.g.*, `"NeteaseMusicClient"`) to a list of song info dictionaries returned by that source.
 
-#### `MusicClient.download(song_infos: list[dict])`
+#### `MusicClient.download(song_infos: list[SongInfo])`
 
 Download one or more songs given a list of song info dictionaries.
 Thread settings and request overrides are automatically taken from `MusicClient.clients_threadings` and `MusicClient.requests_overrides`.
 
 - **Arguments**:
 
-  - **song_infos** (`list[dict]`): A list of song info dictionaries, usually taken from the output of `MusicClient.search()`.
+  - **song_infos** (`list[SongInfo]`): A list of song info dictionaries, usually taken from the output of `MusicClient.search()`.
     Each dictionary must contain a source key so that the method can route it to the appropriate client.
   
 - **Returns**:
@@ -194,7 +194,7 @@ Search for songs using the specific music platform (e.g., Netease, Kugou, QQ, et
 
 - **Returns**:
 
-  - `list[dict]`:  A list of `song_info` dictionaries. Each dictionary usually contains (but is not limited to):
+  - `list[SongInfo]`:  A list of `song_info` dictionaries. Each dictionary usually contains (but is not limited to):
     `identifier` (used internally for deduplication), `song_name`, `singers`, `album`, `duration`, `file_size`, `download_url`, `ext`, `source`, `work_dir` (added by `BaseMusicClient.search()`).
 
 Concrete clients like `NeteaseMusicClient`, `QQMusicClient`, etc., implement `BaseMusicClient._constructsearchurls()` and `BaseMusicClient._search()` to define how the search is actually performed for each platform.
@@ -205,7 +205,7 @@ Download one or more songs from the specific music platform.
 
 - **Arguments**:
   
-  - **song_infos** (`list[dict]`): A list of song information dictionaries (typically the result of `BaseMusicClient.search()`).
+  - **song_infos** (`list[SongInfo]`): A list of song information dictionaries (typically the result of `BaseMusicClient.search()`).
   
   - **num_threadings** (`int`, default `5`): Number of threads used for concurrent downloading.
   
@@ -213,5 +213,5 @@ Download one or more songs from the specific music platform.
   
 - **Returns**:
 
-  - `list[dict]`: A list of successfully downloaded `song_info` dictionaries.
+  - `list[SongInfo]`: A list of successfully downloaded `song_info` dictionaries.
 

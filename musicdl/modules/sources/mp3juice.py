@@ -16,7 +16,7 @@ from urllib.parse import quote
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils import legalizestring, usesearchheaderscookies, usedownloadheaderscookies, touchdir, resp2json, SongInfo
+from ..utils import legalizestring, usesearchheaderscookies, usedownloadheaderscookies, touchdir, resp2json, SongInfo, MusicInfoUtils
 
 
 '''MP3JuiceMusicClient'''
@@ -66,7 +66,7 @@ class MP3JuiceMusicClient(BaseMusicClient):
                 fp.write(song_info.downloaded_contents)
             progress.advance(song_progress_id, total_size)
             progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info.song_name} (Success)")
-            downloaded_song_infos.append(copy.deepcopy(song_info))
+            downloaded_song_infos.append(MusicInfoUtils.fillsongtechinfo(copy.deepcopy(song_info)))
         except Exception as err:
             progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info.song_name} (Error: {err})")
         return downloaded_song_infos

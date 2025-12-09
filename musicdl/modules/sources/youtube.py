@@ -12,7 +12,7 @@ from ytmusicapi import YTMusic
 from .base import BaseMusicClient
 from rich.progress import Progress
 from ..utils.youtubeutils import YouTube
-from ..utils import legalizestring, resp2json, usesearchheaderscookies, byte2mb, seconds2hms, usedownloadheaderscookies, touchdir, SongInfo
+from ..utils import legalizestring, resp2json, usesearchheaderscookies, byte2mb, seconds2hms, usedownloadheaderscookies, touchdir, SongInfo, MusicInfoUtils
 
 
 '''constants'''
@@ -54,7 +54,7 @@ class YouTubeMusicClient(BaseMusicClient):
                     progress.advance(song_progress_id, len(chunk))
                     progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Downloading: {downloading_text})")
             progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Success)")
-            downloaded_song_infos.append(copy.deepcopy(song_info))
+            downloaded_song_infos.append(MusicInfoUtils.fillsongtechinfo(copy.deepcopy(song_info)))
         except Exception as err:
             progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Error: {err})")
         return downloaded_song_infos

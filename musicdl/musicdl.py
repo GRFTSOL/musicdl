@@ -43,7 +43,7 @@ class MusicClient():
         self.search_rules = search_rules
         self.clients_threadings = clients_threadings
         self.requests_overrides = requests_overrides
-        self.music_sources = music_sources if music_sources else ['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient']
+        self.music_sources = music_sources if music_sources else ['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KugouMusicClient', 'KuwoMusicClient', 'QianqianMusicClient']
         self.music_sources = list(set(self.music_sources))
         # init
         self.logger_handle, self.music_clients = LoggerHandle(), dict()
@@ -150,13 +150,13 @@ class MusicClient():
     '-k', '--keyword', default=None, help='The keywords for the music search. If left empty, an interactive terminal will open automatically.', type=str, show_default=True,
 )
 @click.option(
-    '-m', '--music-sources', '--music_sources', default='MiguMusicClient,NeteaseMusicClient,QQMusicClient', help='The music search and download sources.', type=str, show_default=True, 
+    '-m', '--music-sources', '--music_sources', default='MiguMusicClient,NeteaseMusicClient,QQMusicClient,KugouMusicClient,KuwoMusicClient,QianqianMusicClient', help='The music search and download sources.', type=str, show_default=True, 
 )
 @click.option(
     '-i', '--init-music-clients-cfg', '--init_music_clients_cfg', default=None, help='Config such as `work_dir` for each music client as a JSON string.', type=str, show_default=True,
 )
 @click.option(
-    '-r', '--requests-overrides', '--requests_overrides', default=None, help='Requests.get kwargs such as `headers` and `proxies` for each music client as a JSON string.', type=str, show_default=True,
+    '-r', '--requests-overrides', '--requests_overrides', default=None, help='Requests.get / Requests.post kwargs such as `headers` and `proxies` for each music client as a JSON string.', type=str, show_default=True,
 )
 @click.option(
     '-c', '--clients-threadings', '--clients_threadings', default=None, help='Number of threads used for each music client as a JSON string.', type=str, show_default=True,

@@ -2,6 +2,7 @@
 from .data import SongInfo
 from .lyric import WhisperLRC
 from .quarkparser import QuarkParser
+from .musicinfo import MusicInfoUtils
 from .modulebuilder import BaseModuleBuilder
 from .logger import LoggerHandle, colorize, printtable, printfullline, smarttrunctable
 from .misc import (
