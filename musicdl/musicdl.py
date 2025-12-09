@@ -82,7 +82,7 @@ class MusicClient():
                     colorize(str(song_info_pointer), 'number'), 
                     colorize(search_result['singers'][:12] + '...' if len(search_result['singers']) > 15 else search_result['singers'], 'singer'), 
                     search_result['song_name'], 
-                    search_result['file_size'] if search_result['ext'] not in ['flac', 'wav', 'ogg'] else colorize(search_result['file_size'], 'flac'), 
+                    search_result['file_size'] if search_result['ext'] not in ['flac', 'wav', 'alac', 'ape', 'wv', 'tta', 'dsf', 'dff'] else colorize(search_result['file_size'], 'flac'), 
                     search_result['duration'], search_result['album'], 
                     colorize(search_result['source'].removesuffix('MusicClient').upper(), 'highlight'),
                 ])
