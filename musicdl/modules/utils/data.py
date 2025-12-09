@@ -42,7 +42,6 @@ class SongInfo:
     download_url_status: Optional[Any] = None
     default_download_headers: Dict[str, Any] = field(default_factory=dict)
     downloaded_contents: Optional[Any] = None
-    use_quark_default_download_headers: Optional[bool] = False
     chunk_size: Optional[int] = 1024 * 1024
     @property
     def with_valid_download_url(self) -> bool:

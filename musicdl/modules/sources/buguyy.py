@@ -11,7 +11,7 @@ import copy
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, usedownloadheaderscookies, SongInfo, QuarkParser
+from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, SongInfo, QuarkParser
 
 
 '''BuguyyMusicClient'''
@@ -40,14 +40,6 @@ class BuguyyMusicClient(BaseMusicClient):
         }
         self.default_headers = self.default_search_headers
         self._initsession()
-    '''_download'''
-    @usedownloadheaderscookies
-    def _download(self, song_info: SongInfo, request_overrides: dict = None, downloaded_song_infos: list = [], progress: Progress = None, song_progress_id: int = 0):
-        if song_info['use_quark_default_download_headers']:
-            request_overrides['headers'] = self.quark_default_download_headers
-            return super()._download(song_info=song_info, request_overrides=request_overrides, downloaded_song_infos=downloaded_song_infos, progress=progress, song_progress_id=song_progress_id)
-        else:
-            return super()._download(song_info=song_info, request_overrides=request_overrides, downloaded_song_infos=downloaded_song_infos, progress=progress, song_progress_id=song_progress_id)
     '''_constructsearchurls'''
     def _constructsearchurls(self, keyword: str, rule: dict = None, request_overrides: dict = None):
         # init
@@ -94,7 +86,7 @@ class BuguyyMusicClient(BaseMusicClient):
                             if ext == 'NULL': ext = 'wav'
                             song_info.update(dict(
                                 download_url=download_url, download_url_status=download_url_status, raw_data={'search': search_result, 'download': download_result},
-                                use_quark_default_download_headers=True, ext=ext, file_size=download_url_status['probe_status']['file_size']
+                                default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size']
                             ))
                             if song_info.with_valid_download_url: break
                         except:
@@ -115,7 +107,7 @@ class BuguyyMusicClient(BaseMusicClient):
                         if ext == 'NULL': download_url.split('.')[-1].split('?')[0] or 'mp3'
                         song_info.update(dict(
                             download_url=download_url, download_url_status=download_url_status, raw_data={'search': search_result, 'download': download_result},
-                            use_quark_default_download_headers=False, ext=ext, file_size=download_url_status['probe_status']['file_size']
+                            ext=ext, file_size=download_url_status['probe_status']['file_size']
                         ))
                     except:
                         continue
