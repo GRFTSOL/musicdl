@@ -22,6 +22,7 @@ from pathlib import Path
 from xml.dom import minidom
 from xml.etree import ElementTree
 from dataclasses import dataclass
+from platformdirs import user_log_dir
 from pywidevine import PSSH, Cdm, Device
 from pywidevine.license_protocol_pb2 import WidevinePsshData
 
@@ -486,7 +487,7 @@ class AppleMusicClientUtils:
     def download(download_item: DownloadItem, work_dir: str = './', silent: bool = False, codec: SongCodec = SongCodec.AAC_LEGACY, wrapper_decrypt_ip: str = "127.0.0.1:10020"):
         ext = download_item.stream_info.file_format.value
         encrypted_path = os.path.join(work_dir, f"{download_item.random_uuid}_encrypted.{ext}")
-        is_success = AppleMusicClientUtils.downloadstream(download_item.stream_info.audio_track.stream_url, encrypted_path, silent=silent)
+        is_success = AppleMusicClientUtils.downloadstream(download_item.stream_info.audio_track.stream_url, encrypted_path, silent=silent, random_uuid=download_item.random_uuid)
         decrypted_path = os.path.join(work_dir, f"{download_item.random_uuid}_decrypted.{ext}")
         download_item.staged_path = os.path.join(work_dir, f"{download_item.random_uuid}_staged.{ext}")
         is_success = AppleMusicClientUtils.decrypt(
@@ -547,12 +548,15 @@ class AppleMusicClientUtils:
         return is_success
     '''downloadstream'''
     @staticmethod
-    def downloadstream(stream_url: str, download_path: str, silent: bool = False):
+    def downloadstream(stream_url: str, download_path: str, silent: bool = False, random_uuid: str = ''):
         download_path_obj = Path(download_path)
         download_path_obj.parent.mkdir(parents=True, exist_ok=True)
+        log_dir = user_log_dir(appname='musicdl', appauthor='zcjin')
+        log_file_path = os.path.join(log_dir, f"musicdl_{random_uuid}.log")
         cmd = [
             "N_m3u8DL-RE", stream_url, "--binary-merge", "--ffmpeg-binary-path", shutil.which('ffmpeg'),
             "--save-name", download_path_obj.stem, "--save-dir", download_path_obj.parent, "--tmp-dir", download_path_obj.parent,
+            '--log-file-path', log_file_path,
         ]
         capture_output = True if silent else False
         ret = subprocess.run(cmd, check=True, capture_output=capture_output, text=True, encoding='utf-8', errors='ignore')

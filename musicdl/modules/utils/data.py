@@ -53,13 +53,16 @@ class SongInfo:
         return bool(is_valid_format and is_downloadable)
     # save info
     work_dir: Optional[str] = './'
+    _save_path: Optional[str] = None
     @property
     def save_path(self) -> str:
+        if self._save_path is not None: return self._save_path
         sp, same_name_file_idx = os.path.join(self.work_dir, f"{self.song_name} - {self.identifier}.{self.ext.removeprefix('.')}"), 1
         while os.path.exists(sp):
             sp = os.path.join(self.work_dir, f"{self.song_name} - {self.identifier} ({same_name_file_idx}).{self.ext.removeprefix('.')}")
             same_name_file_idx += 1
         sp = sanitize_filepath(sp)
+        self._save_path = sp
         return sp
     # identifier
     identifier: Optional[str] = None

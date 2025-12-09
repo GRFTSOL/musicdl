@@ -13,8 +13,8 @@ import shutil
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils.appleutils import AppleMusicClientUtils
-from ..utils import touchdir, legalizestring, resp2json, isvalidresp, seconds2hms, usesearchheaderscookies, safeextractfromdict, usedownloadheaderscookies, AudioLinkTester, WhisperLRC
+from ..utils.appleutils import AppleMusicClientUtils, DownloadItem
+from ..utils import touchdir, legalizestring, resp2json, seconds2hms, usesearchheaderscookies, safeextractfromdict, usedownloadheaderscookies, SongInfo
 
 
 '''AppleMusicClient'''
@@ -50,30 +50,26 @@ class AppleMusicClient(BaseMusicClient):
         self._initsession()
     '''_download'''
     @usedownloadheaderscookies
-    def _download(self, song_info: dict, request_overrides: dict = None, downloaded_song_infos: list = [], progress: Progress = None, song_progress_id: int = 0):
-        if isinstance(song_info['download_url'], str): return super()._download(song_info=song_info, request_overrides=request_overrides, downloaded_song_infos=downloaded_song_infos, progress=progress, song_progress_id=song_progress_id)
+    def _download(self, song_info: SongInfo, request_overrides: dict = None, downloaded_song_infos: list = [], progress: Progress = None, song_progress_id: int = 0):
+        if isinstance(song_info.download_url, str): return super()._download(song_info=song_info, request_overrides=request_overrides, downloaded_song_infos=downloaded_song_infos, progress=progress, song_progress_id=song_progress_id)
         request_overrides = request_overrides or {}
         try:
-            touchdir(song_info['work_dir'])
-            tmp_dir = os.path.join(self.work_dir.replace(' ', ''), self.source.replace(' ', ''), song_info['identifier'].replace(' ', '')) # replace space to avoid bugs
+            touchdir(song_info.work_dir)
+            tmp_dir = os.path.join(self.work_dir.replace(' ', ''), self.source.replace(' ', ''), song_info.identifier.replace(' ', '')) # replace space to avoid bugs
             touchdir(tmp_dir)
-            download_item = song_info['download_url']
-            save_path, same_name_file_idx = os.path.join(song_info['work_dir'], f"{song_info['song_name']}.{song_info['ext']}"), 1
-            while os.path.exists(save_path):
-                save_path = os.path.join(song_info['work_dir'], f"{song_info['song_name']}_{same_name_file_idx}.{song_info['ext']}")
-                same_name_file_idx += 1
-            download_item.final_path = save_path
+            download_item: DownloadItem = song_info.download_url
+            download_item.final_path = os.path.join(tmp_dir, f'{song_info.identifier}.{song_info.ext}')
             progress.update(song_progress_id, total=1)
-            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Downloading")
+            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info.song_name} (Downloading)")
             AppleMusicClientUtils.download(download_item, work_dir=tmp_dir)
-            progress.advance(song_progress_id, 1)
-            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Success)")
-            downloaded_song_info = copy.deepcopy(song_info)
-            downloaded_song_info['save_path'] = save_path
-            downloaded_song_infos.append(downloaded_song_info)
+            shutil.move(download_item.final_path, song_info.save_path)
+            progress.update(song_progress_id, total=os.path.getsize(song_info.save_path))
+            progress.advance(song_progress_id, os.path.getsize(song_info.save_path))
+            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info.song_name} (Success)")
+            downloaded_song_infos.append(copy.deepcopy(song_info))
             shutil.rmtree(tmp_dir, ignore_errors=True)
         except Exception as err:
-            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info['song_name']} (Error: {err})")
+            progress.update(song_progress_id, description=f"{self.source}.download >>> {song_info.song_name} (Error: {err})")
         return downloaded_song_infos
     '''_fetchtoken'''
     def _fetchtoken(self, request_overrides: dict = None):
@@ -145,65 +141,54 @@ class AppleMusicClient(BaseMusicClient):
             search_results: dict = resp2json(resp)['resources']['songs']
             for song_key, search_result in search_results.items():
                 # --download results
-                search_result['song_key'] = song_key
-                if 'id' not in search_result:
+                if not isinstance(search_result, dict) or ('id' not in search_result):
                     continue
+                search_result['song_key'] = song_key
+                song_info = SongInfo(source=self.source)
                 # ----non-vip users
                 if not self.default_cookies or 'media-user-token' not in self.default_cookies:
                     download_result = safeextractfromdict(search_result, ['attributes', 'previews', 0], {})
-                    download_url = download_result.get('url')
+                    download_url: str = download_result.get('url')
                     if not download_url: continue
-                    download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url, request_overrides)
-                    if not download_url_status['ok']: continue
-                    try:
-                        download_result_suppl = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).probe(download_url, request_overrides)
-                    except:
-                        download_result_suppl = {'download_url': download_url, 'file_size': 'NULL', 'ext': 'NULL'}
-                    ext, file_size = download_url.split('.')[-1].split('?')[0], download_result_suppl['file_size']
-                    if download_result_suppl['ext'] != 'NULL': ext = download_result_suppl['ext']
-                    download_result['download_result_suppl'] = download_result_suppl
-                    lyric_result, lyric = {}, 'NULL'
+                    song_info = SongInfo(
+                        source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides), 
+                        ext=download_url.split('.')[-1].split('?')[0], raw_data={'search': search_result, 'download': download_result, 'lyric': {}}, lyric='NULL',
+                    )
+                    song_info.download_url_status['probe_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
+                    ext, file_size = song_info.download_url_status['probe_status']['ext'], song_info.download_url_status['probe_status']['file_size']
+                    if file_size and file_size != 'NULL': song_info.file_size = file_size
+                    if not song_info.file_size: song_info.file_size = 'NULL'
+                    if ext and ext != 'NULL': song_info.ext = ext
                 # ----vip users
                 else:
                     account_info = self._fetchaccountinfo(request_overrides=request_overrides)
                     geo = safeextractfromdict(account_info, ['meta', 'subscription', 'storefront'], 'us')
                     params = {"extend": "extendedAssetUrls", "include": "lyrics,albums"}
-                    resp = self.get(f'https://amp-api.music.apple.com/v1/catalog/{geo}/songs/{search_result["id"]}', params=params, **request_overrides)
-                    if not isvalidresp(resp=resp): continue
-                    download_result = resp2json(resp=resp)
-                    song_metadata = download_result['data'][0]
-                    resp = self.post("https://play.itunes.apple.com/WebObjects/MZPlay.woa/wa/webPlayback", json={"salableAdamId": search_result["id"], "language": "en-US"}, **request_overrides)
-                    if not isvalidresp(resp=resp): continue
-                    webplayback = resp2json(resp=resp)
-                    download_result['webplayback'] = webplayback
-                    download_item = AppleMusicClientUtils.getsongdownloaditem(song_metadata=song_metadata, webplayback=webplayback, get_license_exchange_func=self._fetchlicenseexchange, request_overrides=request_overrides)
+                    try:
+                        resp = self.get(f'https://amp-api.music.apple.com/v1/catalog/{geo}/songs/{search_result["id"]}', params=params, **request_overrides)
+                        resp.raise_for_status()
+                        download_result = resp2json(resp=resp)
+                        song_metadata = download_result['data'][0]
+                        resp = self.post("https://play.itunes.apple.com/WebObjects/MZPlay.woa/wa/webPlayback", json={"salableAdamId": search_result["id"], "language": "en-US"}, **request_overrides)
+                        resp.raise_for_status()
+                        webplayback = resp2json(resp=resp)
+                        download_result['webplayback'] = webplayback
+                    except:
+                        continue
+                    download_item: DownloadItem = AppleMusicClientUtils.getsongdownloaditem(song_metadata=song_metadata, webplayback=webplayback, get_license_exchange_func=self._fetchlicenseexchange, request_overrides=request_overrides)
                     lyric_result, lyric = download_item.lyrics_results if download_item.lyrics_results else {}, download_item.lyrics.synced if download_item.lyrics.synced else 'NULL'
                     download_url, ext = download_item, download_item.stream_info.file_format.value
-                    download_url_status = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).test(download_url.stream_info.audio_track.stream_url, request_overrides)
-                    if not download_url_status['ok']: continue
-                    try:
-                        download_result_suppl = AudioLinkTester(headers=self.default_download_headers, cookies=self.default_download_cookies).probe(download_url.stream_info.audio_track.stream_url, request_overrides)
-                    except:
-                        download_result_suppl = {'download_url': download_url.stream_info.audio_track.stream_url, 'file_size': 'NULL', 'ext': 'NULL'}
-                    file_size = download_result_suppl['file_size']
-                    download_result['download_result_suppl'] = download_result_suppl
-                # --lyric results
-                if not self.default_cookies or 'media-user-token' not in self.default_cookies:
-                    try:
-                        if os.environ.get('ENABLE_WHISPERLRC', 'False').lower() == 'true':
-                            lyric_result = WhisperLRC(model_size_or_path='small').fromurl(
-                                download_url, headers=self.default_download_headers, cookies=self.default_download_cookies, request_overrides=request_overrides
-                            )
-                            lyric = lyric_result['lyric']
-                        else:
-                            lyric_result, lyric = dict(), 'NULL'
-                    except:
-                        lyric_result, lyric = dict(), 'NULL'
-                # --construct song_info
-                duration = seconds2hms(float(safeextractfromdict(search_result, ['attributes', 'durationInMillis'], '0')) / 1000)
-                song_info = dict(
-                    source=self.source, raw_data=dict(search_result=search_result, download_result=download_result, lyric_result=lyric_result), 
-                    download_url_status=download_url_status, download_url=download_url, ext=ext, file_size=file_size, lyric=lyric, duration=duration, 
+                    song_info = SongInfo(
+                        source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_item.stream_info.audio_track.stream_url, request_overrides), 
+                        ext=ext, raw_data={'search': search_result, 'download': download_result, 'lyric': lyric_result}, lyric=lyric,
+                    )
+                    song_info.download_url_status['probe_status'] = self.audio_link_tester.probe(download_item.stream_info.audio_track.stream_url, request_overrides)
+                    file_size = song_info.download_url_status['probe_status']['file_size']
+                    if file_size and file_size != 'NULL': song_info.file_size = file_size
+                    if not song_info.file_size: song_info.file_size = 'NULL'
+                if not song_info.with_valid_download_url: continue
+                song_info.update(
+                    duration=seconds2hms(float(safeextractfromdict(search_result, ['attributes', 'durationInMillis'], '0')) / 1000),
                     song_name=legalizestring(safeextractfromdict(search_result, ['attributes', 'name'], 'NULL'), replace_null_string='NULL'), 
                     singers=legalizestring(safeextractfromdict(search_result, ['attributes', 'artistName'], 'NULL'), replace_null_string='NULL'), 
                     album=legalizestring(safeextractfromdict(search_result, ['attributes', 'albumName'], 'NULL'), replace_null_string='NULL'),
