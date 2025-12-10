@@ -9,6 +9,7 @@ from .tidal import TIDALMusicClient
 from .lizhi import LizhiMusicClient
 from .apple import AppleMusicClient
 from .kugou import KugouMusicClient
+from .fangpi import FangpiMusicClient
 from .buguyy import BuguyyMusicClient
 from ..utils import BaseModuleBuilder
 from .netease import NeteaseMusicClient
@@ -28,7 +29,7 @@ class MusicClientBuilder(BaseModuleBuilder):
         'MP3JuiceMusicClient': MP3JuiceMusicClient, 'YinyuedaoMusicClient': YinyuedaoMusicClient, 'LizhiMusicClient': LizhiMusicClient, 'XimalayaMusicClient': XimalayaMusicClient,
         'JooxMusicClient': JooxMusicClient, 'KuwoMusicClient': KuwoMusicClient, 'KugouMusicClient': KugouMusicClient, 'FiveSingMusicClient': FiveSingMusicClient,
         'QianqianMusicClient': QianqianMusicClient, 'MiguMusicClient': MiguMusicClient, 'NeteaseMusicClient': NeteaseMusicClient, 'YouTubeMusicClient': YouTubeMusicClient,
-        'TIDALMusicClient': TIDALMusicClient, 'AppleMusicClient': AppleMusicClient,
+        'TIDALMusicClient': TIDALMusicClient, 'AppleMusicClient': AppleMusicClient, 'FangpiMusicClient': FangpiMusicClient,
     }
 
 
