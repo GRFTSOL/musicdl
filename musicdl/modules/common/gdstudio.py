@@ -21,7 +21,7 @@ from ..utils import legalizestring, resp2json, usesearchheaderscookies, byte2mb,
 '''SUPPORTED_SITES'''
 SUPPORTED_SITES = [
     'spotify', 'tencent', 'netease', 'kuwo', 'tidal', 'qobuz', 'joox', 'bilibili', 'apple', 'ytmusic'
-][0:1]
+]
 
 
 '''GDStudioMusicClient'''
@@ -77,23 +77,21 @@ class GDStudioMusicClient(BaseMusicClient):
             source_default_rule['source'], count = source, 0
             while self.search_size_per_source > count:
                 # --post rule
-                post_hostname = 'music.gdstudio.xyz'
                 page_rule_post = copy.deepcopy(source_default_rule)
                 page_rule_post['pages'] = str(int(count // page_size) + 1)
                 page_rule_post['count'] = str(page_size)
-                page_rule_post['s'] = self._yieldcrc32(keyword, post_hostname)
+                page_rule_post['s'] = self._yieldcrc32(keyword)
                 # --get rule
-                get_hostname = 'music-api-us.gdstudio.xyz'
                 page_rule_get = copy.deepcopy(source_default_rule)
                 page_rule_get['pages'] = str(int(count // page_size) + 1)
                 page_rule_get['count'] = str(page_size)
-                page_rule_get['s'] = self._yieldcrc32(keyword, get_hostname)
+                page_rule_get['s'] = self._yieldcrc32(keyword)
                 page_rule_get['callback'] = self._yieldcallback()
                 page_rule_get['_'] = str(int(time.time() * 1000))
                 # --all append
                 search_urls.append({
-                    f'https://{post_hostname}/api.php': {'data': page_rule_post, 'params': {'callback': self._yieldcallback()}, 'method': 'post', 'hostname': post_hostname},
-                    f'https://{get_hostname}/api.php': {'params': page_rule_get, 'method': 'get', 'hostname': get_hostname},
+                    f'https://music.gdstudio.xyz/api.php': {'data': page_rule_post, 'params': {'callback': self._yieldcallback()}, 'method': 'post'},
+                    f'https://music-api-us.gdstudio.xyz/api.php': {'params': page_rule_get, 'method': 'get'},
                 })
                 count += page_size
         self.search_size_per_source = self.search_size_per_source * len(SUPPORTED_SITES)
@@ -110,7 +108,7 @@ class GDStudioMusicClient(BaseMusicClient):
             # --search results
             for search_url, search_url_info in search_meta.items():
                 assert isinstance(search_url_info, dict)
-                method, hostname = search_url_info.pop('method'), search_url_info.pop('hostname')
+                method = search_url_info.pop('method')
                 try:
                     resp: requests.Response = getattr(self, method)(search_url, **search_url_info, **request_overrides)
                     resp.raise_for_status()
@@ -126,19 +124,19 @@ class GDStudioMusicClient(BaseMusicClient):
                 song_info = SongInfo(source=self.source, root_source=search_result['source'])
                 for br in [320, 192, 128]: # it seems only up to br=320 for all sources and music files
                     params = {'callback': self._yieldcallback()}
-                    data_json = {'types': 'url', 'id': search_result['id'], 'source': search_result['source'], 'br': br, 's': self._yieldcrc32(search_result['id'], hostname=hostname)}
+                    data_json = {'types': 'url', 'id': search_result['id'], 'source': search_result['source'], 'br': br, 's': self._yieldcrc32(search_result['id'])}
                     try:
                         if method == 'post':
-                            resp = self.post(f'https://{hostname}/api.php?', params=params, data=data_json, **request_overrides)
+                            resp = self.post(f'https://music.gdstudio.xyz/api.php?', params=params, data=data_json, **request_overrides)
                         else:
-                            resp = self.get(f'https://{hostname}/api.php?', params={**params, **data_json, '_': str(int(time.time() * 1000))}, **request_overrides)
+                            resp = self.get(f'https://music-api-us.gdstudio.xyz/api.php?', params={**params, **data_json, '_': str(int(time.time() * 1000))}, **request_overrides)
                         resp.raise_for_status()
                         download_result = resp2json(resp=resp)
                     except:
                         continue
                     if not download_result.get('url'): continue
                     download_url = download_result['url']
-                    if not download_url.startswith('http'): download_url = f'https://{hostname}/' + download_url
+                    if not download_url.startswith('http'): download_url = f'https://music.gdstudio.xyz/' + download_url
                     song_info = SongInfo(
                         source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
                         ext=download_url.split('.')[-1].split('?')[0], file_size_bytes=download_result.get('size', 0), file_size=byte2mb(download_result.get('size', 0)),
@@ -158,11 +156,11 @@ class GDStudioMusicClient(BaseMusicClient):
                 # --lyric results
                 try:
                     params = {'callback': self._yieldcallback()}
-                    data_json = {'types': 'lyric', 'id': search_result['lyric_id'], 'source': search_result['source'], 's': self._yieldcrc32(search_result['lyric_id'], hostname=hostname)}
+                    data_json = {'types': 'lyric', 'id': search_result['lyric_id'], 'source': search_result['source'], 's': self._yieldcrc32(search_result['lyric_id'])}
                     if method == 'post':
-                        resp = self.post(f'https://{hostname}/api.php', data=data_json, params=params, **request_overrides)
+                        resp = self.post(f'https://music.gdstudio.xyz/api.php', data=data_json, params=params, **request_overrides)
                     else:
-                        resp = self.get(f'https://{hostname}/api.php', params={**params, **data_json, '_': str(int(time.time() * 1000))}, **request_overrides)
+                        resp = self.get(f'https://music-api-us.gdstudio.xyz/api.php', params={**params, **data_json, '_': str(int(time.time() * 1000))}, **request_overrides)
                     resp.raise_for_status()
                     lyric_result = resp2json(resp=resp)
                     lyric = lyric_result.get('lyric') or lyric_result.get('tlyric') or 'NULL'
