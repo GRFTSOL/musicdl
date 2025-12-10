@@ -359,8 +359,8 @@ With only the basic installation of musicdl, you can search for and download hig
 | Qobuz                   | Qobuz                              | https://www.qobuz.com                 | `qobuz`              |
 | JOOX                    | JOOX                               | https://www.joox.com                  | `joox`               |
 | Bilibili                | 哔哩哔哩                           | https://www.bilibili.com              | `bilibili`           |
-| Apple Music             | Apple Music（苹果音乐）            | https://www.apple.com/apple-music/    | `apple`              |
-| YouTube Music           | YouTube Music（油管音乐）          | https://music.youtube.com             | `ytmusic`            |
+| Apple Music             | 苹果音乐                           | https://www.apple.com/apple-music/    | `apple`              |
+| YouTube Music           | 油管音乐                           | https://music.youtube.com             | `ytmusic`            |
 
 Specifically, you just need to write and run a few lines of code like this:
 
