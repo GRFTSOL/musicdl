@@ -14,13 +14,13 @@ import json_repair
 from urllib.parse import quote
 from rich.progress import Progress
 from ..sources import BaseMusicClient
-from ..utils import legalizestring, resp2json, seconds2hms, usesearchheaderscookies, byte2mb, estimatedurationwithfilesizebr, SongInfo
+from ..utils import legalizestring, resp2json, usesearchheaderscookies, byte2mb, estimatedurationwithfilesizebr, SongInfo
 
 
 '''SUPPORTED_SITES'''
 SUPPORTED_SITES = [
     'spotify', 'tencent', 'netease', 'kuwo', 'tidal', 'qobuz', 'joox', 'bilibili', 'apple', 'ytmusic'
-][0:1]
+]
 
 
 '''GDStudioMusicClient'''
@@ -75,7 +75,7 @@ class GDStudioMusicClient(BaseMusicClient):
         # init
         request_overrides = request_overrides or {}
         search_meta = copy.deepcopy(search_url)
-        search_url, base_url = search_meta.pop('url'), 'https://music.gdstudio.xyz'
+        search_url, base_url = search_meta.pop('url'), 'https://music.gdstudio.xyz/'
         # successful
         try:
             # --search results
@@ -87,7 +87,7 @@ class GDStudioMusicClient(BaseMusicClient):
                 # --download results
                 if (not isinstance(search_result, dict)) or ('id' not in search_result) or ('url_id' not in search_result) or ('source' not in search_result):
                     continue
-                song_info = SongInfo(source=self.source)
+                song_info = SongInfo(source=self.source, root_source=search_result['source'])
                 for br in [320, 192, 128, 96, 64]: # it seems only up to br=320 for all sources and music files
                     params = {'callback': self._yieldcallback()}
                     data_json = {'types': 'url', 'id': search_result['id'], 'source': search_result['source'], 'br': br, 's': self._yieldcrc32(search_result['id'])}
@@ -101,23 +101,25 @@ class GDStudioMusicClient(BaseMusicClient):
                     download_url = download_result['url']
                     if not download_url.startswith('http'): download_url = base_url + download_url
                     song_info = SongInfo(
-                        source=f"{self.source}|{search_result['source']}", download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
+                        source=self.source, download_url=download_url, download_url_status=self.audio_link_tester.test(download_url, request_overrides),
                         ext=download_url.split('.')[-1].split('?')[0], file_size_bytes=download_result.get('size', 0), file_size=byte2mb(download_result.get('size', 0)),
                         duration=estimatedurationwithfilesizebr(download_result.get('size', 0), download_result.get('br', br)), raw_data={'search': search_result, 'download': download_result},
                         song_name=legalizestring(search_result.get('name', 'NULL'), replace_null_string='NULL'), identifier=f"{search_result['source']}_{search_result['id']}",
                         singers=legalizestring(', '.join(search_result.get('artist', 'NULL')), replace_null_string='NULL'),
-                        album=legalizestring(search_result.get('album', 'NULL'), replace_null_string='NULL'),
+                        album=legalizestring(search_result.get('album', 'NULL'), replace_null_string='NULL'), root_source=search_result['source'],
                     )
                     if song_info.with_valid_download_url: break
+                    return
                 if not song_info.with_valid_download_url: continue
                 song_info.download_url_status['probe_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
                 ext, file_size = song_info.download_url_status['probe_status']['ext'], song_info.download_url_status['probe_status']['file_size']
                 if file_size and file_size != 'NULL': song_info.file_size = file_size
                 if ext and ext != 'NULL': song_info.ext = ext
-                # lyric results
+                # --lyric results
                 try:
-                    params = {'callback': self._yieldcallback(), 'types': 'lyric', 'id': search_result['lyric_id'], 'source': search_result['source'], 's': self._yieldcrc32(search_result['lyric_id'])}
-                    resp = self.get('https://music-api-hk.gdstudio.xyz/api.php', params=params, **request_overrides)
+                    params = {'callback': self._yieldcallback()}
+                    data_json = {'types': 'lyric', 'id': search_result['lyric_id'], 'source': search_result['source'], 's': self._yieldcrc32(search_result['lyric_id'])}
+                    resp = self.post('https://music-api-hk.gdstudio.xyz/api.php', data=data_json, params=params, **request_overrides)
                     resp.raise_for_status()
                     lyric_result = resp2json(resp=resp)
                     lyric = lyric_result.get('lyric') or lyric_result.get('tlyric') or 'NULL'

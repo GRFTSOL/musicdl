@@ -14,6 +14,7 @@ import base64
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 from .base import BaseMusicClient
+from itertools import zip_longest
 from urllib.parse import urlencode
 from rich.progress import Progress
 from typing import List, Dict, Any, Optional
@@ -175,13 +176,15 @@ class MP3JuiceMusicClient(BaseMusicClient):
             # --search results
             resp = self.get(search_url, **request_overrides)
             resp.raise_for_status()
-            search_results = resp2json(resp)
-            search_results = list({item.get("id"): item for item in (search_results["yt"] + search_results["sc"])}.values())
+            search_results_yt, search_results_sc = [], []
+            for item in resp2json(resp)["yt"]: item['root_source'] = 'YouTube'; search_results_yt.append(item)
+            for item in resp2json(resp)["sc"]: item['root_source'] = 'SoundCloud'; search_results_sc.append(item)
+            search_results = [x for ab in zip_longest(search_results_yt, search_results_sc) for x in ab if x is not None]
             for search_result in search_results:
                 # --download results
                 if not isinstance(search_result, dict) or ('id' not in search_result):
                     continue
-                song_info, download_result = SongInfo(source=self.source), dict()
+                song_info, download_result = SongInfo(source=self.source, root_source=item['root_source']), dict()
                 # ----init
                 params = {init_param_name: auth_code, 't': str(int(time.time()))}
                 try:

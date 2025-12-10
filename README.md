@@ -96,6 +96,7 @@ If you are a rights holder and believe this repository infringes your rights, pl
 |  [YinyuedaoMusicClient](https://1mp3.top/)                           |  [音乐岛](https://1mp3.top/)                                           |   ✓                |  ✓                   |    [yinyuedao.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/yinyuedao.py)      |
 |  [BuguyyMusicClient](https://buguyy.top/)                            |  [布谷音乐](https://buguyy.top/)                                       |   ✓                |  ✓                   |    [buguyy.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/buguyy.py)            |
 |  [FangpiMusicClient](https://www.fangpi.net/)                        |  [放屁音乐](https://www.fangpi.net/)                                   |   ✓                |  ✓                   |    [fangpi.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/fangpi.py)            |
+|  [GDStudioMusicClient](https://music.gdstudio.xyz/)                  |  [GD音乐台 (十个主流音乐源)](https://music.gdstudio.xyz/)              |   ✓                |  ✓                   |    [gdstudio.py](https://github.com/CharlesPikachu/musicdl/blob/master/musicdl/modules/sources/gdstudio.py)        |
 
 
 # 🧪 Playground

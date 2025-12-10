@@ -20,6 +20,7 @@ class SongInfo:
     raw_data: Dict[str, Any] = field(default_factory=dict)
     # from which music client
     source: Optional[str] = None
+    root_source: Optional[str] = None
     # song information
     song_name: Optional[str] = None
     singers: Optional[str] = None

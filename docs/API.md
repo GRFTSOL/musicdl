@@ -120,6 +120,7 @@ Thread settings and request overrides are automatically taken from `MusicClient.
 - `musicdl.modules.sources.yinyuedao.YinyuedaoMusicClient`
 - `musicdl.modules.sources.buguyy.BuguyyMusicClient`
 - `musicdl.modules.sources.fangpi.FangpiMusicClient`
+- `musicdl.modules.common.GDStudioMusicClient`
 
 End users usually **do not** instantiate `BaseMusicClient` directly, but instead use one of the specific clients above.
 The methods documented here describe the common behavior of all these clients.
