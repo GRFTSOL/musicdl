@@ -46,14 +46,15 @@ Options:
   -m, --music-sources, --music_sources TEXT
                                   The music search and download sources.
                                   [default: MiguMusicClient,NeteaseMusicClient
-                                  ,QQMusicClient,KugouMusicClient,KuwoMusicClient,QianqianMusicClient]
+                                  ,QQMusicClient,KugouMusicClient,KuwoMusicCli
+                                  ent,QianqianMusicClient]
   -i, --init-music-clients-cfg, --init_music_clients_cfg TEXT
                                   Config such as `work_dir` for each music
                                   client as a JSON string.
   -r, --requests-overrides, --requests_overrides TEXT
-                                  Requests.get / Requests.post kwargs such as `headers` and
-                                  `proxies` for each music client as a JSON
-                                  string.
+                                  Requests.get / Requests.post kwargs such as
+                                  `headers` and `proxies` for each music
+                                  client as a JSON string.
   -c, --clients-threadings, --clients_threadings TEXT
                                   Number of threads used for each music client
                                   as a JSON string.

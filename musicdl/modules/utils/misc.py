@@ -19,19 +19,36 @@ import requests
 import functools
 import json_repair
 import unicodedata
+from io import BytesIO
 from bs4 import BeautifulSoup
+from mutagen import File as MutagenFile
 from pathvalidate import sanitize_filepath, sanitize_filename
 
 
 '''estimatedurationwithfilesizebr'''
-def estimatedurationwithfilesizebr(file_size_bytes: int, br_kbps: float) -> str:
+def estimatedurationwithfilesizebr(file_size_bytes: int, br_kbps: float, return_seconds: bool = False) -> str:
     if not file_size_bytes or not br_kbps or br_kbps <= 0: return "-:-:-"
     total_bits = file_size_bytes * 8
     duration_seconds = int(total_bits / (br_kbps * 1000))
+    if return_seconds: return duration_seconds
     hours = duration_seconds // 3600
     minutes = (duration_seconds % 3600) // 60
     seconds = duration_seconds % 60
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+'''estimatedurationwithfilelink'''
+def estimatedurationwithfilelink(filelink: str = '', headers: dict = None, request_overrides: dict = None):
+    headers, request_overrides = headers or {}, request_overrides or {}
+    try:
+        resp = requests.get(filelink, headers=headers, timeout=10, **request_overrides)
+        resp.raise_for_status()
+        f = BytesIO(resp.content)
+        audio = MutagenFile(f)
+        length = getattr(audio.info, "length", 0)
+        return int(length)
+    except:
+        return 0
 
 
 '''cookies2dict'''
