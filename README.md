@@ -360,6 +360,65 @@ from musicdl.modules import MusicClientBuilder
 print(MusicClientBuilder.REGISTERED_MODULES)
 ```
 
+#### WhisperLRC
+
+On some music platforms, it’s not possible to obtain the lyric files corresponding to the audio, *e.g*, `XimalayaMusicClient` and `MituMusicClient`. 
+To handle this, we provide a faster-whisper interface that can automatically generate lyrics for tracks whose lyrics are unavailable for download.
+
+For audio files that have already been downloaded, you can use the following invocation to automatically generate lyrics for the local file,
+
+```python
+from musicdl.modules import WhisperLRC
+
+your_local_music_file_path = 'xxx.flac'
+WhisperLRC(model_size_or_path='base').fromfilepath(your_local_music_file_path)
+```
+
+The available `model_size_or_path`, ordered from smallest to largest, are:
+
+```python
+tiny, tiny.en, base, base.en, small, small.en, distil-small.en, medium, medium.en, distil-medium.en, large-v1, large-v2, large-v3, large, distil-large-v2, distil-large-v3, large-v3-turbo, turbo
+```
+
+In general, the larger the model, the better the generated lyrics (transcription/translation) will be, but this also means it will take longer to run.
+
+If you want to automatically generate lyric files during the download process, 
+you can set the environment variable `ENABLE_WHISPERLRC=True` (for example, by running `export ENABLE_WHISPERLRC=True`). 
+However, this is generally not recommended, as it may cause a single run of the program to take a very long time,
+unless you set `search_size_per_source` to `1` and `model_size_or_path` to `tiny`.
+
+Of course, you can also directly call `.fromurl` to generate a lyrics file for a song given by a direct URL:
+
+```python
+from musicdl.modules import WhisperLRC
+
+music_file_link = ''
+WhisperLRC(model_size_or_path='base').fromurl(music_link)
+```
+
+#### Scenarios Where Quark Netdisk Login Cookies Are Required
+
+Some websites share high-quality or lossless music files via [Quark Netdisk](https://pan.quark.cn/) links, for example, `MituMusicClient`, `GequbaoMusicClient`, `YinyuedaoMusicClient`, and `BuguyyMusicClient`.
+
+If you want to download high-quality or lossless audio files from these music platforms, you need to provide the cookies from your logged-in Quark Netdisk web session when calling musicdl. 
+For example, you can do the following: 
+
+```python
+from musicdl import musicdl
+
+init_music_clients_cfg = dict()
+init_music_clients_cfg['YinyuedaoMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
+init_music_clients_cfg['GequbaoMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
+init_music_clients_cfg['MituMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
+init_music_clients_cfg['BuguyyMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
+
+music_client = musicdl.MusicClient(music_sources=['MituMusicClient', 'YinyuedaoMusicClient', 'GequbaoMusicClient', 'BuguyyMusicClient'], init_music_clients_cfg=init_music_clients_cfg)
+music_client.startcmdui()
+```
+
+Please note that musicdl does not provide any speed-limit bypass for Quark Netdisk. 
+If the cookies you supply belong to a non-VIP Quark account, the download speed may be limited to only a few hundred KB/s.
+
 #### TIDAL High-Quality Music Download
 
 If you want to download lossless-quality music from [TIDAL](https://tidal.com/), you need to make sure that [PyAV](https://github.com/PyAV-Org/PyAV) is available or that [FFmpeg](https://www.ffmpeg.org/) is in your environment variables, 
@@ -446,65 +505,6 @@ music_client = musicdl.MusicClient(music_sources=['YouTubeMusicClient'])
 music_client.startcmdui()
 ```
 
-#### WhisperLRC
-
-On some music platforms, it’s not possible to obtain the lyric files corresponding to the audio, *e.g*, `XimalayaMusicClient` and `MituMusicClient`. 
-To handle this, we provide a faster-whisper interface that can automatically generate lyrics for tracks whose lyrics are unavailable for download.
-
-For audio files that have already been downloaded, you can use the following invocation to automatically generate lyrics for the local file,
-
-```python
-from musicdl.modules import WhisperLRC
-
-your_local_music_file_path = 'xxx.flac'
-WhisperLRC(model_size_or_path='base').fromfilepath(your_local_music_file_path)
-```
-
-The available `model_size_or_path`, ordered from smallest to largest, are:
-
-```python
-tiny, tiny.en, base, base.en, small, small.en, distil-small.en, medium, medium.en, distil-medium.en, large-v1, large-v2, large-v3, large, distil-large-v2, distil-large-v3, large-v3-turbo, turbo
-```
-
-In general, the larger the model, the better the generated lyrics (transcription/translation) will be, but this also means it will take longer to run.
-
-If you want to automatically generate lyric files during the download process, 
-you can set the environment variable `ENABLE_WHISPERLRC=True` (for example, by running `export ENABLE_WHISPERLRC=True`). 
-However, this is generally not recommended, as it may cause a single run of the program to take a very long time,
-unless you set `search_size_per_source` to `1` and `model_size_or_path` to `tiny`.
-
-Of course, you can also directly call `.fromurl` to generate a lyrics file for a song given by a direct URL:
-
-```python
-from musicdl.modules import WhisperLRC
-
-music_file_link = ''
-WhisperLRC(model_size_or_path='base').fromurl(music_link)
-```
-
-#### Scenarios Where Quark Netdisk Login Cookies Are Required
-
-Some websites share high-quality or lossless music files via [Quark Netdisk](https://pan.quark.cn/) links, for example, `MituMusicClient`, `GequbaoMusicClient`, `YinyuedaoMusicClient`, and `BuguyyMusicClient`.
-
-If you want to download high-quality or lossless audio files from these music platforms, you need to provide the cookies from your logged-in Quark Netdisk web session when calling musicdl. 
-For example, you can do the following: 
-
-```python
-from musicdl import musicdl
-
-init_music_clients_cfg = dict()
-init_music_clients_cfg['YinyuedaoMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
-init_music_clients_cfg['GequbaoMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
-init_music_clients_cfg['MituMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
-init_music_clients_cfg['BuguyyMusicClient'] = {'quark_parser_config': {'cookies': your_cookies_with_str_or_dict_format}}
-
-music_client = musicdl.MusicClient(music_sources=['MituMusicClient', 'YinyuedaoMusicClient', 'GequbaoMusicClient', 'BuguyyMusicClient'], init_music_clients_cfg=init_music_clients_cfg)
-music_client.startcmdui()
-```
-
-Please note that musicdl does not provide any speed-limit bypass for Quark Netdisk. 
-If the cookies you supply belong to a non-VIP Quark account, the download speed may be limited to only a few hundred KB/s.
-
 #### Apple Music Download
 
 `AppleMusicClient` works similarly to `TIDALMusicClient`: 
@@ -524,6 +524,87 @@ music_client.startcmdui()
 
 It is important to note that to download Apple Music audio files (including decryption) using musicdl, you must properly install [GPAC](https://gpac.io/downloads/gpac-nightly-builds/),
 [Bento4](https://www.bento4.com/downloads/) and [N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE).
+
+#### GD Studio Music Download
+
+We’ve added `GDStudioMusicClient` to musicdl as a practical solution for users who are on a tight budget or who find it difficult to configure extra command-line tools/arguments for musicdl. 
+With only the basic installation of musicdl, you can search for and download high-quality music files from the following music platforms:
+
+| Music Platforms (EN)    | Music Platforms (CN)               | Official Website                      | `music_sources` key  |
+| -----------------       | -------------------                | -----------------------------------   | -------------------  |
+| Spotify                 | Spotify                            | https://www.spotify.com               | `spotify`            |
+| Tencent (QQ Music)      | QQ音乐                             | https://y.qq.com                      | `tencent`            |
+| NetEase Cloud Music     | 网易云音乐                         | https://music.163.com                 | `netease`            |
+| Kuwo                    | 酷我音乐                           | https://www.kuwo.cn                   | `kuwo`               |
+| TIDAL                   | TIDAL                              | https://tidal.com                     | `tidal`              |
+| Qobuz                   | Qobuz                              | https://www.qobuz.com                 | `qobuz`              |
+| JOOX                    | JOOX                               | https://www.joox.com                  | `joox`               |
+| Bilibili                | 哔哩哔哩                           | https://www.bilibili.com              | `bilibili`           |
+| Apple Music             | Apple Music（苹果音乐）            | https://www.apple.com/apple-music/    | `apple`              |
+| YouTube Music           | YouTube Music（油管音乐）          | https://music.youtube.com             | `ytmusic`            |
+
+Specifically, you just need to write and run a few lines of code like this:
+
+```python
+from musicdl import musicdl
+
+music_client = musicdl.MusicClient(music_sources=['GDStudioMusicClient'])
+music_client.startcmdui()
+```
+
+Or, equivalently, run the following command in the command line:
+
+```bash
+musicdl -m GDStudioMusicClient
+```
+
+By default, the above code will search for and download music from nine music platforms, excluding YouTube Music.
+The screenshot of the running result is as follows:
+
+<div align="center">
+  <div>
+    <img src="https://github.com/CharlesPikachu/musicdl/raw/master/docs/gdstudioscreenshot1.png" width="600"/>
+  </div>
+  <div>
+    <img src="https://github.com/CharlesPikachu/musicdl/raw/master/docs/gdstudioscreenshot2.png" width="600"/>
+  </div>
+</div>
+<br />
+
+However, please note that this way of running is not very stable (*e.g.*, some sources may fail to find any valid songs) and is likely to exceed the limit on the number of requests per minute allowed for a single IP by `GDStudioMusicClient`. 
+If you still wish to perform a full-platform search, we recommend modifying the default arguments as follows:
+
+```python
+from musicdl import musicdl
+
+init_music_clients_cfg = {'GDStudioMusicClient': {'search_size_per_source': 2}}
+clients_threadings = {'GDStudioMusicClient': 1}
+music_client = musicdl.MusicClient(music_sources=['GDStudioMusicClient'], init_music_clients_cfg=init_music_clients_cfg, clients_threadings=clients_threadings)
+music_client.startcmdui()
+```
+
+The equivalent command in the command line is:
+
+```bash
+musicdl -m GDStudioMusicClient -i "{'GDStudioMusicClient': {'search_size_per_source': 2}}" -c "{'GDStudioMusicClient': 1}"
+```
+
+Or, an even better option is to manually specify a few platforms where you believe your desired music files are likely to be found, for example:
+
+```python
+from musicdl import musicdl
+
+# allowed_music_sources can be set to any subset (i.e., any combination) of ['spotify', 'tencent', 'netease', 'kuwo', 'tidal', 'qobuz', 'joox', 'bilibili', 'apple', 'ytmusic']
+init_music_clients_cfg = {'GDStudioMusicClient': {'search_size_per_source': 5, 'allowed_music_sources': ['spotify', 'qobuz', 'tidal', 'apple']}}
+music_client = musicdl.MusicClient(music_sources=['GDStudioMusicClient'], init_music_clients_cfg=init_music_clients_cfg, clients_threadings=clients_threadings)
+music_client.startcmdui()
+```
+
+The way to run it from the command line is similar:
+
+```bash
+musicdl -m GDStudioMusicClient -i "{'GDStudioMusicClient': {'search_size_per_source': 5, 'allowed_music_sources': ['spotify', 'qobuz', 'tidal', 'apple']}}"
+```
 
 For more details, please refer to the [official documentation](https://musicdl.readthedocs.io/).
 

@@ -21,7 +21,7 @@ from ..utils import legalizestring, resp2json, usesearchheaderscookies, byte2mb,
 '''SUPPORTED_SITES'''
 SUPPORTED_SITES = [
     'spotify', 'tencent', 'netease', 'kuwo', 'tidal', 'qobuz', 'joox', 'bilibili', 'apple', 'ytmusic', # 'kugou', 'ximalaya', 'migu',
-][:-1] # disable ytmusic as it is too slowly and often useless in GDStudioMusicClient
+]
 SITE_TO_API_MAPPER = {
     'kuwo': 'https://music.gdstudio.xyz/api.php', 'tencent': 'https://music.gdstudio.xyz/api.php', 'tidal': 'https://music.gdstudio.xyz/api.php',
     'spotify': 'https://music.gdstudio.xyz/api.php', 'netease': 'https://music.gdstudio.xyz/api.php', 'bilibili': 'https://music.gdstudio.xyz/api.php',
@@ -36,6 +36,7 @@ SITE_TO_API_MAPPER = {
 class GDStudioMusicClient(BaseMusicClient):
     source = 'GDStudioMusicClient'
     def __init__(self, **kwargs):
+        self.allowed_music_sources = kwargs.pop('allowed_music_sources', SUPPORTED_SITES[:-1])
         super(GDStudioMusicClient, self).__init__(**kwargs)
         self.default_search_headers = {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -75,12 +76,14 @@ class GDStudioMusicClient(BaseMusicClient):
     def _constructsearchurls(self, keyword: str, rule: dict = None, request_overrides: dict = None):
         # init
         rule, request_overrides = rule or {}, request_overrides or {}
+        allowed_music_sources = copy.deepcopy(self.allowed_music_sources)
         # search rules
         default_rule = {'types': 'search', 'count': self.search_size_per_page, 'pages': '1', 'name': keyword}
         default_rule.update(rule)
         # construct search urls based on search rules
         search_urls, page_size = [], self.search_size_per_page
         for source in SUPPORTED_SITES:
+            if source not in allowed_music_sources: continue
             source_default_rule = copy.deepcopy(default_rule)
             source_default_rule['source'], count = source, 0
             while self.search_size_per_source > count:
