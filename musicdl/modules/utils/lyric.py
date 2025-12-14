@@ -10,13 +10,16 @@ import os
 import re
 import tempfile
 import requests
-from faster_whisper import WhisperModel
 
 
 '''WhisperLRC'''
 class WhisperLRC:
     def __init__(self, model_size_or_path="small", device="auto", compute_type="int8", cpu_threads=4, num_workers=1, **kwargs):
-        self.whisper_model = WhisperModel(model_size_or_path, device=device, compute_type=compute_type, cpu_threads=cpu_threads, num_workers=num_workers, **kwargs)
+        try:
+            from faster_whisper import WhisperModel
+            self.whisper_model = WhisperModel(model_size_or_path, device=device, compute_type=compute_type, cpu_threads=cpu_threads, num_workers=num_workers, **kwargs)
+        except:
+            self.whisper_model = None
     '''downloadtotmpdir'''
     @staticmethod
     def downloadtotmpdir(url: str, headers: dict = None, timeout: int = 300, cookies: dict = None, request_overrides: dict = None):
@@ -39,6 +42,7 @@ class WhisperLRC:
         return f"[{mm:02d}:{ss:05.2f}]"
     '''fromurl'''
     def fromurl(self, url: str, transcribe_overrides: dict = None, headers: dict = None, timeout: int = 300, cookies: dict = None, request_overrides: dict = None):
+        assert self.whisper_model is not None, 'faster_whisper should be installed via "pip install "faster_whisper"'
         transcribe_overrides, headers, cookies, request_overrides = transcribe_overrides or {}, headers or {}, cookies or {}, request_overrides or {}
         tmp_file_path = ''
         try:
@@ -57,6 +61,7 @@ class WhisperLRC:
                 except: pass
     '''fromfilepath'''
     def fromfilepath(self, file_path: str, transcribe_overrides: dict = None):
+        assert self.whisper_model is not None, 'faster_whisper should be installed via "pip install "faster_whisper"'
         transcribe_overrides = transcribe_overrides or {}
         default_transcribe_settings = {
             'language': None, 'vad_filter': True, 'vad_parameters': dict(min_silence_duration_ms=300), 'chunk_length': 30, 'beam_size': 5

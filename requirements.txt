@@ -5,7 +5,6 @@ pycryptodome
 orjson
 requests
 cryptography
-faster-whisper
 pyfreeproxy
 fake_useragent
 pathvalidate
