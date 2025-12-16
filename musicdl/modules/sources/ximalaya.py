@@ -28,7 +28,7 @@ class XimalayaMusicClient(BaseMusicClient):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
             "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://api.cenguigui.cn/",
+            "Referer": "https://api-v1.cenguigui.cn/",
             "Connection": "keep-alive",
         }
         self.default_download_headers = {
@@ -53,7 +53,7 @@ class XimalayaMusicClient(BaseMusicClient):
         default_rule = {'msg': keyword, 'n': '', 'num': self.search_size_per_source, 'type': 'json'}
         default_rule.update(rule)
         # construct search urls based on search rules
-        base_url = 'https://api.cenguigui.cn/api/music/dg_ximalayamusic.php?'
+        base_url = 'https://api-v1.cenguigui.cn/api/music/dg_ximalayamusic.php?'
         page_rule = copy.deepcopy(default_rule)
         page_rule['num'] = self.search_size_per_source
         search_urls = [base_url + urlencode(page_rule)]
@@ -120,12 +120,12 @@ class XimalayaMusicClient(BaseMusicClient):
                             if song_info.with_valid_download_url: break
                     except:
                         pass
-                # ----try https://api.cenguigui.cn/api/music/dg_ximalayamusic.php finally
+                # ----try https://api-v1.cenguigui.cn/api/music/dg_ximalayamusic.php finally
                 if (not song_info.with_valid_download_url) and ('n' in search_result):
                     song_info = SongInfo(source=self.source)
                     params = {'msg': keyword, 'n': search_result['n'], 'num': self.search_size_per_source, 'type': 'json'}
                     try:
-                        resp = self.get('https://api.cenguigui.cn/api/music/dg_ximalayamusic.php', params=params, **request_overrides)
+                        resp = self.get('https://api-v1.cenguigui.cn/api/music/dg_ximalayamusic.php', params=params, **request_overrides)
                         download_result = resp2json(resp)
                         download_url = download_result.get('url', '')
                         if not download_url: continue
