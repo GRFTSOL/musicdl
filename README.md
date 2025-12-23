@@ -59,11 +59,10 @@
 
 # 🎉 What's New
 
+- 2025-12-24: Released musicdl v2.7.5 — add support for lossless music search and parsing for the gequhai site, and optimize parts of the code.
 - 2025-12-19: Released musicdl v2.7.4 — supports music search and download using TuneHubMusicClient.
 - 2025-12-17: Released musicdl v2.7.3 — supports native Bilibili music search and downloads, improves the search speed of some third-party APIs, refactors the Ximalaya music platform code, and includes several other minor code optimizations.
 - 2025-12-15: Released musicdl v2.7.2 — added support for jamendo and make some improvements.
-- 2025-12-11: Released musicdl v2.7.1 — added support for two new sites and fixed several potential bugs.
-- 2025-12-10: Released musicdl v2.7.0 — the code has been further refactored, with a large amount of redundant code removed or merged; all supported sites can now download lossless music (for some sites, you need to set your membership cookies in the command line or in the code), the search speed has been greatly optimized, and several problematic sites have been fixed.
 
 
 # 🎵 Introduction
