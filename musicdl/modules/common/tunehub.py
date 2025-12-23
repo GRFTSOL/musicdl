@@ -98,7 +98,7 @@ class TuneHubMusicClient(BaseMusicClient):
                 try:
                     resp = self.get(search_result['lrc'], **request_overrides)
                     resp.raise_for_status()
-                    lyric, lyric_result = resp.text, {'lyric': lyric_result}
+                    lyric, lyric_result = resp.text, {'lyric': resp.text}
                 except:
                     lyric_result, lyric = dict(), 'NULL'
                 if lyric and lyric != 'NULL':
