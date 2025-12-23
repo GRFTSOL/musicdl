@@ -95,7 +95,7 @@ class GequhaiMusicClient(BaseMusicClient):
             # --search results
             resp = self.get(search_url, **request_overrides)
             resp.raise_for_status()
-            search_results = self._parsesearchresultsfromhtml(resp.text)[:1]
+            search_results = self._parsesearchresultsfromhtml(resp.text)
             for search_result in search_results:
                 # --download results
                 if not isinstance(search_result, dict) or ('play_url' not in search_result):
