@@ -101,29 +101,30 @@ Thread settings and request overrides are automatically taken from `MusicClient.
 
 `BaseMusicClient` is the abstract base class for all concrete music clients, including,
 
-- `musicdl.modules.sources.fivesing.FiveSingMusicClient`
-- `musicdl.modules.sources.kugou.KugouMusicClient`
-- `musicdl.modules.sources.kuwo.KuwoMusicClient`
-- `musicdl.modules.sources.lizhi.LizhiMusicClient`
-- `musicdl.modules.sources.migu.MiguMusicClient`
-- `musicdl.modules.sources.netease.NeteaseMusicClient`
-- `musicdl.modules.sources.qianqian.QianqianMusicClient`
-- `musicdl.modules.sources.qq.QQMusicClient`
-- `musicdl.modules.sources.ximalaya.XimalayaMusicClient`
-- `musicdl.modules.sources.joox.JooxMusicClient`
-- `musicdl.modules.sources.tidal.TIDALMusicClient`
-- `musicdl.modules.sources.youtube.YouTubeMusicClient`
-- `musicdl.modules.sources.apple.AppleMusicClient`
-- `musicdl.modules.sources.mp3juice.MP3JuiceMusicClient`
-- `musicdl.modules.sources.mitu.MituMusicClient`
-- `musicdl.modules.sources.gequbao.GequbaoMusicClient`
-- `musicdl.modules.sources.yinyuedao.YinyuedaoMusicClient`
-- `musicdl.modules.sources.buguyy.BuguyyMusicClient`
-- `musicdl.modules.sources.fangpi.FangpiMusicClient`
-- `musicdl.modules.sources.jamendo.JamendoMusicClient`
-- `musicdl.modules.sources.bilibili.BilibiliMusicClient`
-- `musicdl.modules.sources.gequhai.GequhaiMusicClient`
-- `musicdl.modules.sources.missevan.MissEvanMusicClient`
+- `musicdl.modules.sources.AppleMusicClient`
+- `musicdl.modules.sources.BilibiliMusicClient`
+- `musicdl.modules.sources.BuguyyMusicClient`
+- `musicdl.modules.sources.FangpiMusicClient`
+- `musicdl.modules.sources.FiveSingMusicClient`
+- `musicdl.modules.sources.GequbaoMusicClient`
+- `musicdl.modules.sources.GequhaiMusicClient`
+- `musicdl.modules.sources.HTQYYMusicClient`
+- `musicdl.modules.sources.JamendoMusicClient`
+- `musicdl.modules.sources.JooxMusicClient`
+- `musicdl.modules.sources.KugouMusicClient`
+- `musicdl.modules.sources.KuwoMusicClient`
+- `musicdl.modules.sources.LizhiMusicClient`
+- `musicdl.modules.sources.MiguMusicClient`
+- `musicdl.modules.sources.MissEvanMusicClient`
+- `musicdl.modules.sources.MP3JuiceMusicClient`
+- `musicdl.modules.sources.MituMusicClient`
+- `musicdl.modules.sources.NeteaseMusicClient`
+- `musicdl.modules.sources.QianqianMusicClient`
+- `musicdl.modules.sources.QQMusicClient`
+- `musicdl.modules.sources.TIDALMusicClient`
+- `musicdl.modules.sources.XimalayaMusicClient`
+- `musicdl.modules.sources.YinyuedaoMusicClient`
+- `musicdl.modules.sources.YouTubeMusicClient`
 - `musicdl.modules.common.GDStudioMusicClient`
 - `musicdl.modules.common.TuneHubMusicClient`
 

@@ -5,6 +5,7 @@ from .joox import JooxMusicClient
 from .base import BaseMusicClient
 from .kuwo import KuwoMusicClient
 from .migu import MiguMusicClient
+from .htqyy import HTQYYMusicClient
 from .tidal import TIDALMusicClient
 from .lizhi import LizhiMusicClient
 from .apple import AppleMusicClient
@@ -36,7 +37,7 @@ class MusicClientBuilder(BaseModuleBuilder):
         'QianqianMusicClient': QianqianMusicClient, 'MiguMusicClient': MiguMusicClient, 'NeteaseMusicClient': NeteaseMusicClient, 'YouTubeMusicClient': YouTubeMusicClient,
         'TIDALMusicClient': TIDALMusicClient, 'AppleMusicClient': AppleMusicClient, 'FangpiMusicClient': FangpiMusicClient, 'GDStudioMusicClient': GDStudioMusicClient,
         'JamendoMusicClient': JamendoMusicClient, 'BilibiliMusicClient': BilibiliMusicClient, 'TuneHubMusicClient': TuneHubMusicClient, 'GequhaiMusicClient': GequhaiMusicClient,
-        'MissEvanMusicClient': MissEvanMusicClient,
+        'MissEvanMusicClient': MissEvanMusicClient, 'HTQYYMusicClient': HTQYYMusicClient,
     }
 
 
