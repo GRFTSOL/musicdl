@@ -44,7 +44,7 @@ class NeteaseMusicClient(BaseMusicClient):
         # parse
         for quality in ['jymaster', 'sky', 'jyeffect', 'hires', 'lossless', 'exhigh', 'standard']:
             try:
-                for prefix in ['api-v1', 'api', 'player']:
+                for prefix in ['api-v2', 'api-v1', 'api', 'player']:
                     try:
                         resp = self.get(url=f'https://{prefix}.cenguigui.cn/api/netease/music_v1.php?id={song_id}&type=json&level={quality}', timeout=10, **request_overrides)
                         resp.raise_for_status()

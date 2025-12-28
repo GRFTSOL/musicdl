@@ -39,7 +39,7 @@ class MiguMusicClient(BaseMusicClient):
             except: return 0
         # parse
         try:
-            for prefix in ['api-v1', 'api', 'player']:
+            for prefix in ['api-v2', 'api-v1', 'api', 'player']:
                 try:
                     resp = self.get(url=f'https://{prefix}.cenguigui.cn/api/mg_music/api.php?id={song_id}', timeout=10, **request_overrides)
                     resp.raise_for_status()
