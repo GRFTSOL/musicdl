@@ -29,7 +29,7 @@ Instructions:
 Music Files Save Path:
     %s (root dir is the current directory if using relative path).'''
 '''DEFAULT_MUSIC_SOURCES'''
-DEFAULT_MUSIC_SOURCES = ['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KugouMusicClient', 'KuwoMusicClient', 'QianqianMusicClient']
+DEFAULT_MUSIC_SOURCES = ['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KuwoMusicClient']
 
 
 '''MusicClient'''
@@ -52,7 +52,7 @@ class MusicClient():
         for music_source in self.music_sources:
             if music_source not in MusicClientBuilder.REGISTERED_MODULES.keys(): continue
             init_music_client_cfg = {
-                'search_size_per_source': 5, 'auto_set_proxies': False, 'random_update_ua': False, 'max_retries': 5,
+                'search_size_per_source': 3, 'auto_set_proxies': False, 'random_update_ua': False, 'max_retries': 3,
                 'maintain_session': False, 'logger_handle': self.logger_handle, 'disable_print': True, 'work_dir': 'musicdl_outputs',
                 'proxy_sources': None, 'default_search_cookies': {}, 'default_download_cookies': {}, 'type': music_source,
                 'search_size_per_page': 10, 'strict_limit_search_size_per_page': True, 'quark_parser_config': {}

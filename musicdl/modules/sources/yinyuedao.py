@@ -10,7 +10,14 @@ import json_repair
 from bs4 import BeautifulSoup
 from .base import BaseMusicClient
 from rich.progress import Progress
-from ..utils import legalizestring, usesearchheaderscookies, safeextractfromdict, SongInfo, QuarkParser
+from ..utils import legalizestring, usesearchheaderscookies, safeextractfromdict, seconds2hms, searchdictbykey, SongInfo, QuarkParser
+
+
+'''settings'''
+FORMAT_RANK = {
+    "DSD": 100, "DSF": 100, "DFF": 100, "WAV": 95, "AIFF": 95, "FLAC": 90, "ALAC": 90, "APE": 88, "WV": 88, "OPUS": 70,
+    "AAC": 65, "M4A": 65, "OGG": 60, "VORBIS": 60, "MP3": 50, "WMA": 45,
+}
 
 
 '''YinyuedaoMusicClient'''
@@ -73,6 +80,11 @@ class YinyuedaoMusicClient(BaseMusicClient):
     def _search(self, keyword: str = '', search_url: str = '', request_overrides: dict = None, song_infos: list = [], progress: Progress = None, progress_id: int = 0):
         # init
         request_overrides = request_overrides or {}
+        def _sortbyformat(items):
+            def _score(x):
+                fmt = (x.get("format") or "").upper()
+                return FORMAT_RANK.get(fmt, 0)
+            return sorted(items, key=_score, reverse=True)
         # successful
         try:
             # --search results
@@ -87,21 +99,27 @@ class YinyuedaoMusicClient(BaseMusicClient):
                 # ----parse from quark links
                 if self.quark_parser_config.get('cookies'):
                     quark_download_urls = [*search_result.get('downlist', []), *search_result.get('ktmdownlist', [])]
+                    quark_download_urls = _sortbyformat(quark_download_urls)
                     for quark_download_url in quark_download_urls:
                         song_fmt = safeextractfromdict(quark_download_url, ['format'], '')
-                        if not song_fmt or song_fmt.lower() in ['mp3']: continue
+                        if not song_fmt: continue
                         song_info = SongInfo(source=self.source)
                         try:
                             quark_wav_download_url = quark_download_url['url']
                             download_result, download_url = QuarkParser.parsefromurl(quark_wav_download_url, **self.quark_parser_config)
+                            duration = searchdictbykey(download_result, 'duration')
+                            duration = [int(float(d)) for d in duration if int(float(d)) > 0]
+                            if duration: duration = duration[0]
+                            else: duration = 0
                             if not download_url: continue
                             download_url_status = self.quark_audio_link_tester.test(download_url, request_overrides)
                             download_url_status['probe_status'] = self.quark_audio_link_tester.probe(download_url, request_overrides)
                             ext = download_url_status['probe_status']['ext']
-                            if ext == 'NULL': ext = 'flac'
+                            if ext == 'NULL': ext = 'mp3'
                             song_info.update(dict(
                                 download_url=download_url, download_url_status=download_url_status, raw_data={'search': search_result, 'download': download_result},
-                                default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size']
+                                default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size'],
+                                duration_s=duration, duration=seconds2hms(duration),
                             ))
                             if song_info.with_valid_download_url: break
                         except:
@@ -128,9 +146,10 @@ class YinyuedaoMusicClient(BaseMusicClient):
                 lyric_result, lyric = dict(), 'NULL'
                 song_info.raw_data['lyric'] = lyric_result
                 song_info.update(dict(
-                    lyric=lyric, duration='-:-:-', song_name=legalizestring(search_result.get('title', 'NULL'), replace_null_string='NULL'), 
+                    lyric=lyric, song_name=legalizestring(search_result.get('title', 'NULL'), replace_null_string='NULL'), 
                     singers=legalizestring(search_result.get('singer', 'NULL'), replace_null_string='NULL'), album='NULL', identifier=search_result['id'],
                 ))
+                if not song_info.duration or song_info.duration == 'NULL': song_info.duration = '-:-:-'
                 # --append to song_infos
                 song_infos.append(song_info)
                 # --judgement for search_size

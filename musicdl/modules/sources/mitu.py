@@ -6,11 +6,19 @@ Author:
 WeChat Official Account (微信公众号):
     Charles的皮卡丘
 '''
+import re
 import copy
 from .base import BaseMusicClient
 from urllib.parse import urlencode
 from rich.progress import Progress
-from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, SongInfo, QuarkParser
+from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, seconds2hms, searchdictbykey, SongInfo, QuarkParser
+
+
+'''settings'''
+FORMAT_RANK = {
+    "DSD": 100, "DSF": 100, "DFF": 100, "WAV": 95, "AIFF": 95, "FLAC": 90, "ALAC": 90, "APE": 88, "WV": 88,
+    "OPUS": 70, "AAC": 65, "M4A": 65, "OGG": 60, "VORBIS": 60, "MP3": 50, "WMA": 45,
+}
 
 
 '''MituMusicClient'''
@@ -58,6 +66,16 @@ class MituMusicClient(BaseMusicClient):
     def _search(self, keyword: str = '', search_url: str = '', request_overrides: dict = None, song_infos: list = [], progress: Progress = None, progress_id: int = 0):
         # init
         request_overrides = request_overrides or {}
+        def _parseformat(label: str) -> str:
+            s = label.upper()
+            candidates = sorted(FORMAT_RANK.keys(), key=len, reverse=True)
+            for fmt in candidates:
+                if re.search(rf"\b{re.escape(fmt)}\b", s) or fmt in s: return fmt
+            return "UNKNOWN"
+        def _qualityscore(item: str) -> int:
+            label = item.split("$$", 1)[0]
+            fmt = _parseformat(label)
+            return FORMAT_RANK.get(fmt, 0)
         # successful
         try:
             # --search results
@@ -72,20 +90,25 @@ class MituMusicClient(BaseMusicClient):
                 # ----parse from quark links
                 if self.quark_parser_config.get('cookies'):
                     quark_download_urls: list[str] = search_result.get('downurl', [])
+                    quark_download_urls = sorted(quark_download_urls, key=lambda x: _qualityscore(x), reverse=True)
                     for quark_download_url in quark_download_urls:
-                        if 'mp3' in quark_download_url.lower(): continue
                         song_info = SongInfo(source=self.source)
                         try:
                             quark_wav_download_url = quark_download_url[quark_download_url.index('https://'):]
                             download_result, download_url = QuarkParser.parsefromurl(quark_wav_download_url, **self.quark_parser_config)
+                            duration = searchdictbykey(download_result, 'duration')
+                            duration = [int(float(d)) for d in duration if int(float(d)) > 0]
+                            if duration: duration = duration[0]
+                            else: duration = 0
                             if not download_url: continue
                             download_url_status = self.quark_audio_link_tester.test(download_url, request_overrides)
                             download_url_status['probe_status'] = self.quark_audio_link_tester.probe(download_url, request_overrides)
                             ext = download_url_status['probe_status']['ext']
-                            if ext == 'NULL': ext = 'wav'
+                            if ext == 'NULL': ext = 'mp3'
                             song_info.update(dict(
                                 download_url=download_url, download_url_status=download_url_status, raw_data={'search': search_result, 'download': download_result},
-                                default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size']
+                                default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size'],
+                                duration_s=duration, duration=seconds2hms(duration),
                             ))
                             if song_info.with_valid_download_url: break
                         except:
@@ -124,9 +147,10 @@ class MituMusicClient(BaseMusicClient):
                 if not lyric or '歌词获取失败' in lyric: lyric = 'NULL'
                 song_info.raw_data['lyric'] = lyric_result
                 song_info.update(dict(
-                    lyric=lyric, duration='-:-:-', song_name=legalizestring(search_result.get('name', 'NULL'), replace_null_string='NULL'),
+                    lyric=lyric, song_name=legalizestring(search_result.get('name', 'NULL'), replace_null_string='NULL'),
                     singers=legalizestring(search_result.get('artist', 'NULL'), replace_null_string='NULL'), album='NULL', identifier=search_result['rid'],
                 ))
+                if not song_info.duration or song_info.duration == 'NULL': song_info.duration = '-:-:-'
                 # --append to song_infos
                 song_infos.append(song_info)
                 # --judgement for search_size

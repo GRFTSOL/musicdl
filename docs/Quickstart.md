@@ -9,19 +9,19 @@ If you want the quickest way to run musicdl to verify that your environment meet
 ```python
 from musicdl import musicdl
 
-music_client = musicdl.MusicClient(music_sources=['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KugouMusicClient', 'KuwoMusicClient', 'QianqianMusicClient'])
+music_client = musicdl.MusicClient(music_sources=['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KuwoMusicClient'])
 music_client.startcmdui()
 ```
 
-The above code runs musicdl using `MiguMusicClient`, `NeteaseMusicClient`, `QQMusicClient`, `KugouMusicClient`, `KuwoMusicClient` and `QianqianMusicClient` as both the search sources and download sources.
+The above code runs musicdl using `MiguMusicClient`, `NeteaseMusicClient`, `QQMusicClient` and `KuwoMusicClient` as both the search sources and download sources.
 
 Of course, you can also run musicdl by entering the following equivalent command directly in the command line,
 
 ```bash
-musicdl -m NeteaseMusicClient,MiguMusicClient,QQMusicClient,KugouMusicClient,KuwoMusicClient,QianqianMusicClient
+musicdl -m NeteaseMusicClient,MiguMusicClient,QQMusicClient,KuwoMusicClient
 ```
 
-Please note that musicdl uses six Mainland China music sources by default for searching. 
+Please note that musicdl uses four Mainland China music sources by default for searching. 
 If you need to use overseas music sources, you must manually specify the music platform each time you run the program. 
 For example:
 
@@ -410,7 +410,7 @@ If you still wish to perform a full-platform search, we recommend modifying the 
 ```python
 from musicdl import musicdl
 
-init_music_clients_cfg = {'GDStudioMusicClient': {'search_size_per_source': 2}}
+init_music_clients_cfg = {'GDStudioMusicClient': {'search_size_per_source': 1}}
 music_client = musicdl.MusicClient(music_sources=['GDStudioMusicClient'], init_music_clients_cfg=init_music_clients_cfg)
 music_client.startcmdui()
 ```
@@ -418,7 +418,7 @@ music_client.startcmdui()
 The equivalent command in the command line is:
 
 ```bash
-musicdl -m GDStudioMusicClient -i "{'GDStudioMusicClient': {'search_size_per_source': 2}}"
+musicdl -m GDStudioMusicClient -i "{'GDStudioMusicClient': {'search_size_per_source': 1}}"
 ```
 
 Or, an even better option is to manually specify a few platforms where you believe your desired music files are likely to be found, for example:
@@ -427,7 +427,7 @@ Or, an even better option is to manually specify a few platforms where you belie
 from musicdl import musicdl
 
 # allowed_music_sources can be set to any subset (i.e., any combination) of ['spotify', 'tencent', 'netease', 'kuwo', 'tidal', 'qobuz', 'joox', 'bilibili', 'apple', 'ytmusic']
-init_music_clients_cfg = {'GDStudioMusicClient': {'search_size_per_source': 5, 'allowed_music_sources': ['spotify', 'qobuz', 'tidal', 'apple']}}
+init_music_clients_cfg = {'GDStudioMusicClient': {'search_size_per_source': 3, 'allowed_music_sources': ['spotify', 'qobuz', 'tidal', 'apple']}}
 music_client = musicdl.MusicClient(music_sources=['GDStudioMusicClient'], init_music_clients_cfg=init_music_clients_cfg, clients_threadings=clients_threadings)
 music_client.startcmdui()
 ```
@@ -435,7 +435,7 @@ music_client.startcmdui()
 The way to run it from the command line is similar:
 
 ```bash
-musicdl -m GDStudioMusicClient -i "{'GDStudioMusicClient': {'search_size_per_source': 5, 'allowed_music_sources': ['spotify', 'qobuz', 'tidal', 'apple']}}"
+musicdl -m GDStudioMusicClient -i "{'GDStudioMusicClient': {'search_size_per_source': 3, 'allowed_music_sources': ['spotify', 'qobuz', 'tidal', 'apple']}}"
 ```
 
 #### TuneHub Music Download

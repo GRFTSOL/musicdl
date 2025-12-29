@@ -8,16 +8,16 @@ A unified interface encapsulated for all supported music platforms. Arguments su
 - **music_sources** (`list[str]`, optional):  A list of music client names to be enabled. 
   Each name must be a key registered in `MusicClientBuilder.REGISTERED_MODULES`.  
   If left empty, the following default sources are used:  
-  `['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KugouMusicClient', 'KuwoMusicClient', 'QianqianMusicClient']`.
+  `['MiguMusicClient', 'NeteaseMusicClient', 'QQMusicClient', 'KuwoMusicClient']`.
 
 - **init_music_clients_cfg** (`dict[str, dict]`, optional): Per-client initialization configuration.  
   The outer dict is keyed by music source name (*e.g.*, `"NeteaseMusicClient"`), and each value is a dict that overrides the default config:
   ```python
   {
-      "search_size_per_source": 5,
+      "search_size_per_source": 3,
       "auto_set_proxies": False,
       "random_update_ua": False,
-      "max_retries": 5,
+      "max_retries": 3,
       "maintain_session": False,
       "logger_handle": LoggerHandle(),
       "disable_print": True,
@@ -133,7 +133,7 @@ End users usually **do not** instantiate `BaseMusicClient` directly, but instead
 The methods documented here describe the common behavior of all these clients.
 Arguments supported when initializing this class include:
 
-- **search_size_per_source** (`int`, default `5`):  
+- **search_size_per_source** (`int`, default `3`):  
   Maximum number of search results to fetch per source.
   
 - **auto_set_proxies** (`bool`, default `False`):  
@@ -142,7 +142,7 @@ Arguments supported when initializing this class include:
 - **random_update_ua** (`bool`, default `False`):  
   If `True`, randomly refresh the `User-Agent` header on each request.
 
-- **max_retries** (`int`, default `5`):  
+- **max_retries** (`int`, default `3`):  
   Maximum number of retry attempts for each HTTP request in `BaseMusicClient.get()` / `BaseMusicClient.post()`.
 
 - **maintain_session** (`bool`, default `False`):  
