@@ -39,7 +39,7 @@ class MiguMusicClient(BaseMusicClient):
             except: return 0
         # parse
         try:
-            for prefix in ['api-v2', 'api-v1', 'api', 'player']:
+            for prefix in ['api-v1', 'api']:
                 try:
                     resp = self.get(url=f'https://{prefix}.cenguigui.cn/api/mg_music/api.php?id={song_id}', timeout=10, **request_overrides)
                     resp.raise_for_status()
@@ -114,6 +114,11 @@ class MiguMusicClient(BaseMusicClient):
                 for rate in sorted(search_result.get('audioFormats', []), key=lambda x: int(_safefetchfilesize(x)), reverse=True):
                     if not isinstance(rate, dict): continue
                     if byte2mb(_safefetchfilesize(rate)) == 'NULL' or (not rate.get('formatType', '')) or (not rate.get('resourceType', '')): continue
+                    song_info.file_size = byte2mb(_safefetchfilesize(rate))
+                    if song_info_cgg.with_valid_download_url and song_info_cgg.file_size != 'NULL':
+                        file_size_cgg = float(song_info_cgg.file_size.removesuffix('MB').strip())
+                        file_size_official = float(song_info.file_size.removesuffix('MB').strip()) if song_info.file_size != 'NULL' else 0
+                        if file_size_cgg + 1 >= file_size_official: song_info = song_info_cgg; break
                     ext = {'PQ': 'mp3', 'HQ': 'mp3', 'SQ': 'flac', 'ZQ24': 'flac'}.get(rate['formatType'], 'NULL')
                     url = (
                         f"https://c.musicapp.migu.cn/MIGUM3.0/strategy/listen-url/v2.4?resourceType={rate['resourceType']}&netType=01&scene="
@@ -140,10 +145,6 @@ class MiguMusicClient(BaseMusicClient):
                     if file_size and file_size != 'NULL': song_info.file_size = file_size
                     if not song_info.file_size: song_info.file_size = 'NULL'
                     if ext and ext != 'NULL': song_info.ext = ext
-                    if song_info_cgg.with_valid_download_url and song_info_cgg.file_size != 'NULL':
-                        file_size_cgg = float(song_info_cgg.file_size.removesuffix('MB').strip())
-                        file_size_official = float(song_info.file_size.removesuffix('MB').strip()) if song_info.file_size != 'NULL' else 0
-                        if file_size_cgg > file_size_official: song_info = song_info_cgg
                     if song_info.with_valid_download_url: break
                 if not song_info.with_valid_download_url: song_info = song_info_cgg
                 if not song_info.with_valid_download_url: continue
