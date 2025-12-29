@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from .base import BaseMusicClient
 from rich.progress import Progress
-from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, extractdurationsecondsfromlrc, seconds2hms, SongInfo, QuarkParser
+from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, extractdurationsecondsfromlrc, seconds2hms, searchdictbykey, SongInfo, QuarkParser
 
 
 '''GequhaiMusicClient'''
@@ -114,6 +114,10 @@ class GequhaiMusicClient(BaseMusicClient):
                     quark_download_url = download_result.get('mp3_extra_url_decoded', '')
                     try:
                         download_result['quark_parse_result'], download_url = QuarkParser.parsefromdirurl(quark_download_url, **self.quark_parser_config)
+                        duration = searchdictbykey(download_result, 'duration')
+                        duration = [int(float(d)) for d in duration if int(float(d)) > 0]
+                        if duration: duration = duration[0]
+                        else: duration = 0
                         if not download_url: raise
                         download_url_status = self.quark_audio_link_tester.test(download_url, request_overrides)
                         download_url_status['probe_status'] = self.quark_audio_link_tester.probe(download_url, request_overrides)
@@ -121,7 +125,8 @@ class GequhaiMusicClient(BaseMusicClient):
                         if ext == 'NULL': ext = 'mp3'
                         song_info = SongInfo(
                             source=self.source, download_url=download_url, download_url_status=download_url_status, raw_data={'search': search_result, 'download': download_result},
-                            default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size']
+                            default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size'],
+                            duration_s=duration, duration=seconds2hms(duration),
                         )
                     except:
                         song_info = SongInfo(source=self.source)
@@ -160,6 +165,7 @@ class GequhaiMusicClient(BaseMusicClient):
                     duration = seconds2hms(extractdurationsecondsfromlrc(lyric))
                 except:
                     lyric, lyric_result, duration = 'NULL', {}, '-:-:-'
+                if song_info.duration and song_info.duration != '-:-:-': duration = song_info.duration
                 song_info.raw_data['lyric'] = lyric_result
                 song_info.update(dict(
                     lyric=lyric, duration=duration, song_name=legalizestring(download_result.get('mp3_title', 'NULL'), replace_null_string='NULL'),

@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from .base import BaseMusicClient
 from rich.progress import Progress
-from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, SongInfo, QuarkParser
+from ..utils import legalizestring, usesearchheaderscookies, resp2json, safeextractfromdict, searchdictbykey, seconds2hms, SongInfo, QuarkParser
 
 
 '''FangpiMusicClient'''
@@ -92,6 +92,10 @@ class FangpiMusicClient(BaseMusicClient):
                         try:
                             quark_wav_download_url = quark_download_url['share_link']
                             download_result['quark_parse_result'], download_url = QuarkParser.parsefromurl(quark_wav_download_url, **self.quark_parser_config)
+                            duration = searchdictbykey(download_result['quark_parse_result'], 'duration')
+                            duration = [int(float(d)) for d in duration if int(float(d)) > 0]
+                            if duration: duration = duration[0]
+                            else: duration = 0
                             if not download_url: continue
                             download_url_status = self.quark_audio_link_tester.test(download_url, request_overrides)
                             download_url_status['probe_status'] = self.quark_audio_link_tester.probe(download_url, request_overrides)
@@ -99,7 +103,8 @@ class FangpiMusicClient(BaseMusicClient):
                             if ext == 'NULL': ext = 'mp3'
                             song_info.update(dict(
                                 download_url=download_url, download_url_status=download_url_status, raw_data={'search': search_result, 'download': download_result},
-                                default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size']
+                                default_download_headers=self.quark_default_download_headers, ext=ext, file_size=download_url_status['probe_status']['file_size'],
+                                duration_s=duration, duration=seconds2hms(duration),
                             ))
                             if song_info.with_valid_download_url: break
                         except:
@@ -131,9 +136,12 @@ class FangpiMusicClient(BaseMusicClient):
                     lyric, lyric_result = lrc_div.get_text("\n", strip=True), {'lrc_div': str(lrc_div)}
                 except:
                     lyric, lyric_result = 'NULL', {}
-                format_duration = lambda d: "{:02}:{:02}:{:02}".format(*([0] * (3 - len(d.split(":"))) + list(map(int, d.split(":")))))
-                duration = format_duration(download_result.get('mp3_duration', '00:00:00') or '00:00:00')
-                if duration == '00:00:00': duration = '-:-:-'
+                if not song_info.duration or song_info.duration == '-:-:-':
+                    format_duration = lambda d: "{:02}:{:02}:{:02}".format(*([0] * (3 - len(d.split(":"))) + list(map(int, d.split(":")))))
+                    duration = format_duration(download_result.get('mp3_duration', '00:00:00') or '00:00:00')
+                    if duration == '00:00:00': duration = '-:-:-'
+                else:
+                    duration = song_info.duration
                 song_info.raw_data['lyric'] = lyric_result
                 song_info.update(dict(
                     lyric=lyric, duration=duration, song_name=legalizestring(download_result.get('mp3_title', 'NULL'), replace_null_string='NULL'),
