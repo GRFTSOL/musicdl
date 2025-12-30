@@ -1,6 +1,6 @@
 '''
 Function:
-    Implementation of TowT58MusicClient: https://www.2t58.com/
+    Implementation of TwoT58MusicClient: https://www.2t58.com/
 Author:
     Zhenchao Jin
 WeChat Official Account (微信公众号):
@@ -15,11 +15,11 @@ from urllib.parse import urljoin, urlparse
 from ..utils import legalizestring, usesearchheaderscookies, extractdurationsecondsfromlrc, seconds2hms, SongInfo, RandomIPGenerator
 
 
-'''TowT58MusicClient'''
-class TowT58MusicClient(BaseMusicClient):
-    source = 'TowT58MusicClient'
+'''TwoT58MusicClient'''
+class TwoT58MusicClient(BaseMusicClient):
+    source = 'TwoT58MusicClient'
     def __init__(self, **kwargs):
-        super(TowT58MusicClient, self).__init__(**kwargs)
+        super(TwoT58MusicClient, self).__init__(**kwargs)
         self.default_search_headers = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
         }

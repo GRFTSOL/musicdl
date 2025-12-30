@@ -126,7 +126,7 @@ Thread settings and request overrides are automatically taken from `MusicClient.
 - `musicdl.modules.sources.QianqianMusicClient`
 - `musicdl.modules.sources.QQMusicClient`
 - `musicdl.modules.sources.TIDALMusicClient`
-- `musicdl.modules.sources.TowT58MusicClient`
+- `musicdl.modules.sources.TwoT58MusicClient`
 - `musicdl.modules.sources.XimalayaMusicClient`
 - `musicdl.modules.sources.YinyuedaoMusicClient`
 - `musicdl.modules.sources.YouTubeMusicClient`
