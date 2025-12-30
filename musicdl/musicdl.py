@@ -10,7 +10,9 @@ import sys
 import copy
 import click
 import json_repair
+from threading import Lock
 from concurrent.futures import ThreadPoolExecutor
+from rich.progress import Progress, TextColumn, BarColumn, TimeRemainingColumn, MofNCompleteColumn
 if __name__ == '__main__':
     from __init__ import __version__
     from modules import BuildMusicClient, LoggerHandle, MusicClientBuilder, smarttrunctable, colorize, printfullline
@@ -108,17 +110,20 @@ class MusicClient():
     '''search'''
     def search(self, keyword):
         self.logger_handle.info(f'Searching {colorize(keyword, "highlight")} From {colorize("|".join(self.music_sources), "highlight")}')
-        def _search(ms):
-            try:
-                return ms, self.music_clients[ms].search(
-                    keyword=keyword, num_threadings=self.clients_threadings[ms], request_overrides=self.requests_overrides[ms], rule=self.search_rules[ms],
-                )
-            except Exception as err:
-                self.logger_handle.error(f'MusicClient.{ms}.search >>> {keyword} (Error: {err})')
-                return ms, []
-        max_workers = min(len(self.music_sources), 10)
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            return dict(ex.map(_search, self.music_sources))
+        max_workers, main_progress_lock = min(len(self.music_sources), 10), Lock()
+        with Progress(TextColumn("{task.description}"), BarColumn(bar_width=None), MofNCompleteColumn(), TimeRemainingColumn(), refresh_per_second=10) as main_process_context:
+            main_progress_id = main_process_context.add_task(f"ALL sources >>> completed (0/0)", total=0)
+            def _search(ms):
+                try:
+                    return ms, self.music_clients[ms].search(
+                        keyword=keyword, num_threadings=self.clients_threadings[ms], request_overrides=self.requests_overrides[ms], rule=self.search_rules[ms], 
+                        main_process_context=main_process_context, main_progress_id=main_progress_id, main_progress_lock=main_progress_lock,
+                    )
+                except Exception as err:
+                    self.logger_handle.error(f'MusicClient.{ms}.search >>> {keyword} (Error: {err})')
+                    return ms, []
+            with ThreadPoolExecutor(max_workers=max_workers) as ex:
+                return dict(ex.map(_search, self.music_sources))
     '''download'''
     def download(self, song_infos):
         classified_song_infos = {}

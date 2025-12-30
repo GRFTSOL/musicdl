@@ -10,6 +10,7 @@ import os
 import copy
 import pickle
 import requests
+from threading import Lock
 from rich.text import Text
 from itertools import chain
 from datetime import datetime
@@ -111,7 +112,7 @@ class BaseMusicClient():
         raise NotImplementedError('not be implemented')
     '''search'''
     @usesearchheaderscookies
-    def search(self, keyword: str, num_threadings=5, request_overrides: dict = None, rule: dict = None):
+    def search(self, keyword: str, num_threadings: int = 5, request_overrides: dict = None, rule: dict = None, main_process_context: Progress = None, main_progress_id: int = None, main_progress_lock: Lock = None):
         # init
         rule, request_overrides = rule or {}, request_overrides or {}
         # logging
@@ -119,19 +120,36 @@ class BaseMusicClient():
         # construct search urls
         search_urls = self._constructsearchurls(keyword=keyword, rule=rule, request_overrides=request_overrides)
         # multi threadings for searching music files
-        with Progress(TextColumn("{task.description}"), BarColumn(bar_width=None), MofNCompleteColumn(), TimeRemainingColumn()) as progress:
-            progress_id = progress.add_task(f"{self.source}.search >>> completed (0/{len(search_urls)})", total=len(search_urls))
-            song_infos, submitted_tasks = {}, []
-            with ThreadPoolExecutor(max_workers=num_threadings) as pool:
-                for search_url_idx, search_url in enumerate(search_urls):
-                    song_infos[str(search_url_idx)] = []
-                    submitted_tasks.append(pool.submit(
-                        self._search, keyword, search_url, request_overrides, song_infos[str(search_url_idx)], progress, progress_id
-                    ))
-                for _ in as_completed(submitted_tasks):
-                    progress.advance(progress_id, 1)
-                    num_searched_urls = int(progress.tasks[progress_id].completed)
-                    progress.update(progress_id, description=f"{self.source}.search >>> completed ({num_searched_urls}/{len(search_urls)})")
+        if main_process_context is None:
+            owns_progress = True
+            main_process_context = Progress(TextColumn("{task.description}"), BarColumn(bar_width=None), MofNCompleteColumn(), TimeRemainingColumn(), refresh_per_second=10)
+            main_process_context.__enter__()
+        else:
+            owns_progress = False
+        if main_progress_lock is None: main_progress_lock = Lock()
+        with main_progress_lock:
+            progress_id = main_process_context.add_task(f"{self.source}.search >>> completed (0/{len(search_urls)})", total=len(search_urls))
+            if main_progress_id is not None:
+                cur_total = main_process_context.tasks[main_progress_id].total or 0
+                main_process_context.update(main_progress_id, total=cur_total + len(search_urls))
+        song_infos, submitted_tasks = {}, []
+        with ThreadPoolExecutor(max_workers=num_threadings) as pool:
+            for search_url_idx, search_url in enumerate(search_urls):
+                song_infos[str(search_url_idx)] = []
+                submitted_tasks.append(pool.submit(
+                    self._search, keyword, search_url, request_overrides, song_infos[str(search_url_idx)], main_process_context, progress_id
+                ))
+            for future in as_completed(submitted_tasks):
+                future.result()
+                with main_progress_lock:
+                    main_process_context.advance(progress_id, 1)
+                    num_searched_urls = int(main_process_context.tasks[progress_id].completed)
+                    main_process_context.update(progress_id, description=f"{self.source}.search >>> completed ({num_searched_urls}/{len(search_urls)})")
+                    if main_progress_id is not None:
+                        main_process_context.advance(main_progress_id, 1)
+                        all_done = int(main_process_context.tasks[main_progress_id].completed)
+                        all_total = int(main_process_context.tasks[main_progress_id].total or 0)
+                        main_process_context.update(main_progress_id, description=f"ALL sources >>> completed ({all_done}/{all_total})")
         song_infos = list(chain.from_iterable(song_infos.values()))
         song_infos = self._removeduplicates(song_infos=song_infos)
         work_dir = self._constructuniqueworkdir(keyword=keyword)
@@ -144,6 +162,7 @@ class BaseMusicClient():
         else:
             work_dir = self.work_dir
         self.logger_handle.info(f'Finished searching music files using {self.source}. Search results have been saved to {work_dir}, valid items: {len(song_infos)}.', disable_print=self.disable_print)
+        if owns_progress: main_process_context.__exit__(None, None, None)
         # return
         return song_infos
     '''_download'''
