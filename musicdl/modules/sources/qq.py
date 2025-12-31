@@ -176,8 +176,11 @@ class QQMusicClient(BaseMusicClient):
                 # ----common user in post try
                 if not song_info.with_valid_download_url:
                     for imp_func in [self._parsewithvkeysapi]:
-                        try: song_info_flac = imp_func(search_result, request_overrides); break
-                        except: song_info_flac = SongInfo(source=self.source)
+                        try:
+                            song_info_flac = imp_func(search_result, request_overrides)
+                            if song_info_flac.with_valid_download_url: break
+                        except:
+                            song_info_flac = SongInfo(source=self.source)
                     default_rule = {
                         'comm': {
                             'cv': self.version_info['version_code'], 'v': self.version_info['version_code'], 'QIMEI36': self.qimei_info['q36'], 'ct': '11', 

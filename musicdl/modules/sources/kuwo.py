@@ -125,11 +125,11 @@ class KuwoMusicClient(BaseMusicClient):
                     continue
                 song_info = SongInfo(source=self.source)
                 brs = [(4000, '4000kflac'), (2000, '2000kflac'), (1000, 'flac'), (320, '320kmp3'), (192, '192kmp3'), (128, '128kmp3')]
-                # ----try _parsewithflacmusicapi first although in fact "https://mobi.kuwo.cn/mobi.s" also return flac music
+                # ----try thirdpart apis first although in fact "https://mobi.kuwo.cn/mobi.s" also return flac music
                 for imp_func in [self._parsewithcggapi, self._parsewithflacmusicapi]:
                     try:
                         song_info_flac, quality_flac = imp_func(search_result, request_overrides)
-                        break
+                        if song_info_flac.with_valid_download_url: break
                     except:
                         song_info_flac, quality_flac = SongInfo(source=self.source), ('mp3', '128', '128kmp3')
                 # ----try "https://mobi.kuwo.cn/mobi.s" second
