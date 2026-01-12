@@ -38,6 +38,10 @@ def extractdurationsecondsfromlrc(lrc: str) -> Optional[float]:
     return max_t
 
 
+'''cleanlrc'''
+cleanlrc = lambda text: "\n".join(line for raw in re.sub(r"\r\n?", "\n", text).split("\n") if (line := raw.strip("\ufeff\u200b\u200c\u200d\u2060\u00a0 \t").strip()) and not re.fullmatch(r"\[(\d{2}:)?\d{2}:\d{2}(?:\.\d{1,3})?\]", line))
+
+
 '''WhisperLRC'''
 class WhisperLRC:
     def __init__(self, model_size_or_path="small", device="auto", compute_type="int8", cpu_threads=4, num_workers=1, **kwargs):
