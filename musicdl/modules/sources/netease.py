@@ -166,6 +166,7 @@ class NeteaseMusicClient(BaseMusicClient):
                     )
                     song_info.download_url_status['probe_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
                     song_info.file_size = song_info.download_url_status['probe_status']['file_size']
+                    song_info.ext = song_info.download_url_status['probe_status']['ext']
                     if song_info.with_valid_download_url: break
                 if not song_info.with_valid_download_url: song_info = song_info_flac
                 if not song_info.with_valid_download_url: continue

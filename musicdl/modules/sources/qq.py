@@ -135,6 +135,7 @@ class QQMusicClient(BaseMusicClient):
                         )
                         song_info.download_url_status['probe_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
                         song_info.file_size = song_info.download_url_status['probe_status']['file_size']
+                        song_info.ext = song_info.download_url_status['probe_status']['ext']
                         if song_info.with_valid_download_url: break
                 # ----non-vip / vip users using endpoint
                 else:
@@ -160,6 +161,7 @@ class QQMusicClient(BaseMusicClient):
                         )
                         song_info.download_url_status['probe_status'] = self.audio_link_tester.probe(song_info.download_url, request_overrides)
                         song_info.file_size = song_info.download_url_status['probe_status']['file_size']
+                        song_info.ext = song_info.download_url_status['probe_status']['ext']
                         if song_info_flac.with_valid_download_url and (safe_fetch_filesize_func(song_info.file_size) < safe_fetch_filesize_func(song_info_flac.file_size)): song_info = song_info_flac
                         if song_info.with_valid_download_url: break
                 if not song_info.with_valid_download_url: song_info = song_info_flac
