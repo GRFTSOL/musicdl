@@ -8,6 +8,7 @@ WeChat Official Account (微信公众号):
 '''
 import re
 import copy
+import json
 import base64
 from .base import BaseMusicClient
 from rich.progress import Progress
@@ -72,11 +73,6 @@ class QQMusicClient(BaseMusicClient):
             except:
                 song_info_flac = SongInfo(source=self.source)
         return song_info_flac
-    '''_isencryptedendpoint'''
-    def _isencryptedendpoint(self, request_overrides: dict = None):
-        request_overrides = request_overrides or {}
-        if (self.default_cookies or request_overrides.get('cookies')) and self.use_encrypted_endpoint: return True
-        return False
     '''_constructsearchurls'''
     def _constructsearchurls(self, keyword: str, rule: dict = None, request_overrides: dict = None):
         # init
@@ -85,14 +81,15 @@ class QQMusicClient(BaseMusicClient):
         default_rule = {'searchid': QQMusicClientUtils.randomsearchid(), 'query': keyword, 'search_type': SearchType.SONG.value, 'num_per_page': self.search_size_per_page, 'page_num': 1, 'highlight': 1, 'grp': 1}
         default_rule.update(rule)
         # construct search urls based on search rules
-        base_url = QQMusicClientUtils.enc_endpoint if self._isencryptedendpoint(request_overrides) else QQMusicClientUtils.endpoint
+        base_url = QQMusicClientUtils.enc_endpoint if self.use_encrypted_endpoint else QQMusicClientUtils.endpoint
         search_urls, page_size, count = [], self.search_size_per_page, 0
         while self.search_size_per_source > count:
             page_rule = copy.deepcopy(default_rule)
             page_rule['num_per_page'] = page_size
             page_rule['page_num'] = int(count // page_size) + 1
-            search_urls.append({'url': base_url, 'json': QQMusicClientUtils.buildrequestdata(params=page_rule, module="music.search.SearchCgiService", method="DoSearchForQQMusicMobile", credential=Credential().fromcookiesdict(self.default_cookies or request_overrides.get('cookies', {})))})
-            if self._isencryptedendpoint(request_overrides): search_urls[-1]['params'] = {"sign": QQMusicClientUtils.sign(search_urls[-1]['json'])}
+            payload = QQMusicClientUtils.buildrequestdata(params=page_rule, module="music.search.SearchCgiService", method="DoSearchForQQMusicMobile", credential=Credential().fromcookiesdict(self.default_cookies or request_overrides.get('cookies', {})))
+            search_urls.append({'url': base_url, 'data': json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")})
+            if self.use_encrypted_endpoint: search_urls[-1]['params'] = {"sign": QQMusicClientUtils.sign(payload)}
             count += page_size
         # return
         return search_urls
@@ -114,14 +111,14 @@ class QQMusicClient(BaseMusicClient):
                 if not isinstance(search_result, dict) or ('mid' not in search_result): continue
                 song_info = SongInfo(source=self.source)
                 song_info_flac = self._parsewiththirdpartapis(search_result=search_result, request_overrides=request_overrides)
-                # ----vip users using enc_endpoint
-                if self._isencryptedendpoint(request_overrides):
+                # ----non-vip / vip users using enc_endpoint
+                if self.use_encrypted_endpoint:
                     base_url = QQMusicClientUtils.enc_endpoint
                     for quality in EncryptedSongFileType.SORTED_QUALITIES.value:
                         params = {"filename": [f"{quality[0]}{search_result['mid']}{search_result['mid']}{quality[1]}"], "guid": QQMusicClientUtils.randomguid(), "songmid": [search_result['mid']], 'songtype': [0]}
                         current_rule = QQMusicClientUtils.buildrequestdata(params=params, module="music.vkey.GetEVkey", method="CgiGetEVkey", credential=Credential().fromcookiesdict(self.default_cookies or request_overrides.get('cookies', {})), common_override={"ct": "19"})
                         try:
-                            resp = self.post(base_url, json=current_rule, params={"sign": QQMusicClientUtils.sign(current_rule)}, **request_overrides)
+                            resp = self.post(base_url, data=json.dumps(current_rule, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), params={"sign": QQMusicClientUtils.sign(current_rule)}, **request_overrides)
                             resp.raise_for_status()
                             download_result: dict = resp2json(resp)
                         except:
@@ -147,7 +144,7 @@ class QQMusicClient(BaseMusicClient):
                         params = {"filename": [f"{quality[0]}{search_result['mid']}{search_result['mid']}{quality[1]}"], "guid": QQMusicClientUtils.randomguid(), "songmid": [search_result['mid']], 'songtype': [0]}
                         current_rule = QQMusicClientUtils.buildrequestdata(params=params, module="music.vkey.GetVkey", method="UrlGetVkey", credential=Credential().fromcookiesdict(self.default_cookies or request_overrides.get('cookies', {})), common_override={"ct": "19"})
                         try:
-                            resp = self.post(base_url, json=current_rule, **request_overrides)
+                            resp = self.post(base_url, data=json.dumps(current_rule, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), **request_overrides)
                             resp.raise_for_status()
                             download_result: dict = resp2json(resp)
                         except:
