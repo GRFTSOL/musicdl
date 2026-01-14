@@ -1,6 +1,6 @@
 # Release Log
 
-- 2026-01-14: Released musicdl v2.8.3 — Refactor and optimize the code for Migu Music, QQ Music, NetEase Cloud Music, Qianqian Music, Kuwo Music, and Kugou Music, standardize the lyrics output format, extract song cover image URLs into a unified location, and integrate more high-quality third-party APIs for retrieving lossless music.
+- 2026-01-14: Released musicdl v2.8.3 — Refactor and optimize the code for Migu Music, QQ Music, NetEase Cloud Music, Qianqian Music, Kuwo Music, and Kugou Music, standardize the lyrics output format, extract song cover image URLs into a unified location in the returned song information, and integrate more high-quality third-party APIs for retrieving lossless music.
 
 - 2026-01-01: Released musicdl v2.8.2 — adjusted the FreeProxy API arguments, improved the robustness of fetching high-quality music from NetEase Cloud Music, QQ Music, and Migu Music, and fixed some bugs.
 
