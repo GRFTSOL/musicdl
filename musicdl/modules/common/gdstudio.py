@@ -174,8 +174,22 @@ class GDStudioMusicClient(BaseMusicClient):
                 # --cover results
                 if search_result['source'] in {'kuwo'}:
                     cdn_hosts = ["http://img1.kwcdn.kuwo.cn/star/albumcover/", "http://img2.kwcdn.kuwo.cn/star/albumcover/", "http://img3.kwcdn.kuwo.cn/star/albumcover/"]
-                    if search_result['pic_id'].startswith('120/'): search_result['pic_id'] = '300/' + search_result['pic_id'][4:]
-                    song_info.cover_url = cdn_hosts[0] + search_result['pic_id']
+                    try:
+                        if search_result['pic_id'].startswith('120/'): search_result['pic_id'] = '300/' + search_result['pic_id'][4:]
+                        song_info.cover_url = cdn_hosts[0] + search_result['pic_id']
+                    except:
+                        pass
+                elif search_result['source'] in {'apple'}:
+                    try:
+                        song_info.cover_url = search_result['pic_id'].format(w=300, h=300)
+                    except:
+                        pass
+                elif search_result['source'] in {'bilibili'}:
+                    try:
+                        song_info.cover_url = search_result['pic_id']
+                        if not song_info.cover_url.startswith('http'): song_info.cover_url = f'https:{song_info.cover_url}'
+                    except:
+                        pass
                 else:
                     try:
                         data_json = {'types': 'pic', 'id': search_result['pic_id'], 'source': search_result['source'], 'size': 300, 's': self._yieldcrc32(search_result['pic_id'])}
