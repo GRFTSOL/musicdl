@@ -341,8 +341,6 @@ class AudioLinkTester(object):
             outputs["reason"] = f"HEAD error: {err}"
         # RANGEGET test
         try:
-            headers = copy.deepcopy(self.headers)
-            headers["Range"] = "bytes=0-15"
             resp = self.session.get(url, stream=True, allow_redirects=True, **request_overrides)
             outputs.update(dict(status=resp.status_code, method="RANGEGET", final_url=str(resp.url)))
             if resp.status_code not in (200, 206): outputs["reason"] = f"RANGEGET error: response status {resp.status_code}"; return outputs
