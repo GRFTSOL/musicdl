@@ -62,6 +62,7 @@ class BuguyyMusicClient(BaseMusicClient):
             m = re.search(r"(?i)(?:WAV|FLAC)#(https?://[^#]+)|MP3#(https?://[^#]+)", quark_download_url)
             quark_download_url = m.group(1) or m.group(2)
             download_result, download_url = QuarkParser.parsefromurl(quark_download_url, **self.quark_parser_config)
+            if not download_url or not str(download_url).startswith('http'): continue
             duration = [int(float(d)) for d in searchdictbykey(download_result, 'duration') if int(float(d)) > 0]
             duration_s = duration[0] if duration else 0
             song_info = SongInfo(

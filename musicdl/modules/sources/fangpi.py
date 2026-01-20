@@ -64,6 +64,7 @@ class FangpiMusicClient(BaseMusicClient):
         for quark_download_url in quark_download_urls:
             quark_download_url = quark_download_url['share_link']
             download_result['quark_parse_result'], download_url = QuarkParser.parsefromurl(quark_download_url, **self.quark_parser_config)
+            if not download_url or not str(download_url).startswith('http'): continue
             duration = [int(float(d)) for d in searchdictbykey(download_result, 'duration') if int(float(d)) > 0]
             duration_s = duration[0] if duration else 0
             song_info = SongInfo(
@@ -80,7 +81,7 @@ class FangpiMusicClient(BaseMusicClient):
             song_info.duration = format_duration_func(download_result.get('mp3_duration', '00:00:00') or '00:00:00')
             if song_info.duration == '00:00:00': song_info.duration = '-:-:-'
         if not song_info.lyric or '歌词获取失败' in song_info.lyric: song_info.lyric = 'NULL'
-        if not song_info.duration or song_info.duration == '-:-:-': song_info.duration = extractdurationsecondsfromlrc(song_info.lyric)
+        if not song_info.duration or song_info.duration == '-:-:-': song_info.duration = seconds2hms(extractdurationsecondsfromlrc(song_info.lyric))
         # return
         return song_info
     '''_parsesearchresultfromweb'''
